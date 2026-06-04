@@ -1,0 +1,175 @@
+/* ------------------------------ Estilos para TABS ------------------------------ */
+QTabWidget::pane {
+    border-top: 1px solid border_principal; /* Volver al borde normal */
+    background-color: bg_principal;
+    top: -1px;
+}
+
+QTabBar {
+    background-color: bg_tabs;
+    border-bottom: 1px solid border_principal; /* RESTAURADO el borde azul de la barra */ /* ✅✅ Borde de abajo de TODOS los tabs */
+    qproperty-drawBase: 0;
+    height: 50px;
+    min-height: 50px;
+    max-height: 50px;
+}
+
+/* Estilo base para todos los tabs */
+QTabBar::tab {
+    background-color: bg_tabs;
+    color: txt_principal;
+    padding: 0px ui_tab_header_padding_x; /* ✅✅ padding interno horizontal de tabs */
+    padding-bottom: 0px;
+    border-bottom: none;
+    border-right: 1px solid #1D1D1D;
+    border-top: 1px solid transparent;
+    font-family: "Inter", Arial, Helvetica;
+    font-weight: 500;
+    font-size: 15px;
+    height: 50px;
+    min-height: 50px;
+    max-height: 50px;
+    line-height: 50px;
+}
+
+/* Añadimos un pseudo-elemento ::after para todos los tabs para crear una línea inferior consistente */
+QTabBar::tab::after {
+    /* content: ""; */ /* ELIMINADO: Qt no soporta esta propiedad */
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: border_principal; /* Color de la línea inferior */
+}
+
+/* Estilos específicos para tipos de tabs */
+QTabBar::tab:first {
+    background-color: bg_tabs;
+    color: txt_principal;
+    padding: 0px ui_tab_header_padding_x;
+    text-transform: uppercase;
+}
+
+QTabBar::tab:only-one {
+    padding: 0px ui_tab_header_padding_x;
+}
+
+/* Estilo seleccionado SOLO cuando NO hay un pseudo-tab activo */
+QTabWidget:!property(pseudoTabActive) QTabBar::tab:selected,
+QTabWidget[pseudoTabActive="false"]::tab:selected {
+    background-color: bg_principal !important; /* FORZAR fondo correcto */
+    color: violeta_claro;
+    border: 1px solid border_principal; /* Borde general */
+    border-bottom: none !important; /* Asegurar SIN borde inferior */ /* ✅✅ Borde inferior del tab seleccionado (ahora es 'none' para que tape) */
+    margin-bottom: -1px; /* Añadido para solapar/tapar el borde azul de QTabBar */
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    height: 50px;
+    min-height: 50px;
+    max-height: 50px;
+}
+
+/* Eliminar la línea inferior (::after) para el tab seleccionado */
+QTabWidget:!property(pseudoTabActive) QTabBar::tab:selected::after,
+QTabWidget[pseudoTabActive="false"]::tab:selected::after {
+    /* background-color: transparent; */ /* Quitado - no funcionaba bien */
+    height: 0px; /* NUEVO INTENTO: Ocultar poniendo altura a 0 */
+}
+
+/* Estilo para TODOS los tabs cuando SÍ hay un pseudo-tab activo */
+QTabWidget[pseudoTabActive="true"] QTabBar::tab {
+    background-color: bg_tabs; /* Fondo normal */
+    color: txt_principal; /* Color normal */
+    border: none; /* Resetear bordes */
+    border-top: 1px solid transparent; /* Borde superior para mantener altura */
+    border-right: 1px solid #1D1D1D; /* Mantener separador derecho */
+    /* border-bottom: 1px solid border_principal; */ /* ELIMINADO - Hereda visualmente de QTabBar */
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+}
+
+/* Botón de cierre en tabs */
+QTabBar::close-button {
+    image: url(:/icons/close.svg);
+    width: 14px;
+    height: 14px;
+    padding-right: 8px;
+    subcontrol-position: right center;
+}
+
+QTabBar::close-button:hover {
+    image: url(:/icons/close.svg);
+    background: transparent;
+}
+
+/* Botones en la esquina derecha */
+#tabCornerWidget {
+    background-color: bg_tabs;
+    border-bottom: 1px solid border_principal; /* ✅✅ Borde de abajo de los iconos de la derecha */
+    height: 49px; /* 50px de barra + 1px de borde */
+    min-height: 49px;
+    max-height: 49px;
+    /* Sin margin-top ni reglas especiales */
+    /* Resetear margen por si acaso */
+}
+
+/* Bajar el corner widget 1px cuando el pseudo-tab está activo */
+QTabWidget[pseudoTabActive="true"] #tabCornerWidget {
+    margin-top: 1px; 
+}
+
+/* Estilo BASE para los botones de la esquina (siempre aplicado) */
+#tabCornerButton {
+    background-color: transparent; /* Hacer transparente para que se vea el fondo del widget */
+    border: none; /* Quitar bordes por defecto */
+    /* El borde inferior viene del #tabCornerWidget */
+    padding: 0px;
+    border-radius: 0px;
+    margin: 0px;
+    height: 50px; /* Altura fija */
+    width: 37px;  /* Ancho fijo */
+    color: txt_principal; /* Color de icono normal */
+}
+
+/* Hover para botones NO activos */
+#tabCornerButton:hover {
+    background-color: transparent; /* Mantenemos fondo transparente */
+    /* El icono cambia por C++, el borde inferior no se toca */
+}
+
+/* Estilo para el botón cuando actúa como TAB ACTIVO */
+QPushButton#tabCornerButton[activeTab="true"] {
+    background-color: bg_principal; /* Mismo fondo que tab activo */
+    color: violeta_claro; /* Mismo color de texto/icono que tab activo */
+    border: 1px solid border_principal; /* Borde gris general como tab activo */
+    border-bottom: none; /* SIN borde inferior, igual que tab activo */
+    border-top-left-radius: 4px; /* Esquina redondeada */
+    border-top-right-radius: 4px; /* Esquina redondeada */
+    height: 50px; /* Asegurar altura consistente */
+    min-height: 50px;
+    max-height: 50px;
+}
+
+/* Hover para el botón ACTIVO (mantener consistencia o ajustar si se desea) */
+QPushButton#tabCornerButton[activeTab="true"]:hover {
+    background-color: bg_principal; /* Podríamos mantener el mismo fondo o aclararlo ligeramente */
+    /* Mantener los mismos bordes y radios */
+    color: violeta_claro;
+}
+
+/* Quitar estilos de :pressed si no son necesarios */
+/*#tabCornerButton:pressed {
+    background-color: bg_tabs;
+}*/
+
+/* NUEVO: Estilo específico para tabs NO seleccionados cuando NO hay pseudo-tab */
+QTabWidget:!property(pseudoTabActive) QTabBar::tab:!selected,
+QTabWidget[pseudoTabActive="false"] QTabBar::tab:!selected {
+    /* border-bottom: 1px solid border_principal; */ /* ELIMINADO - Hereda visualmente de QTabBar */
+    /* Hereda border-top transparente y border-right del estilo base */
+    /* Asegurar que el fondo y color sean los de inactivo */
+    background-color: bg_tabs;
+    color: txt_principal;
+}
+

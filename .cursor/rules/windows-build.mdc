@@ -1,0 +1,65 @@
+---
+alwaysApply: true
+---
+
+# Windows Build Workflow
+
+- On Windows, always use:
+
+```bat
+./compilar_dev.bat
+```
+
+- `compilar_dev.bat` already:
+  - compiles the project
+  - launches the compiled executable automatically
+
+- Never run the executable manually after running `./compilar_dev.bat`, unless explicitly requested.
+
+- Never perform clean builds automatically.
+
+- Never delete, wipe, or recreate the build folder unless explicitly requested.
+
+- Always preserve the previous compilation and incremental build cache.
+
+- If compilation fails, try to fix the issue without cleaning the build directory first.
+
+- After a relevant (non-trivial) change, always bump the app version by `+0.001` using `docs/ChangeLog.md` as the human source of truth:
+  - Add a new top changelog entry with the new version number.
+  - The changelog must always be written in castellano (Spanish).
+  - At the end of the new changelog note, add a short suggested commit name inside `[]`. Este nombre debe estar en castellano. Ejemplo [Transcode Tab - Se actualizó la UI para mostrar en una linea los settings de MOV H264]
+- After updating `docs/ChangeLog.md`, run:
+
+```bat
+./sync_version.bat
+```
+
+- `sync_version.bat` is responsible for synchronizing generated/version surfaces such as `VERSION` and `CMakeLists.txt`. The app runtime version and Help pseudo-tab visible version must come from CMake's `PROJECT_VERSION`.
+- Do not manually edit version numbers in `src/ui/mainwindow/mainwindow.cpp`, `src/main.cpp`, `VERSION`, or `CMakeLists.txt` unless the version sync script itself is being updated.
+- Do not recompile again after bumping/synchronizing the app version.
+
+## Language Policy
+
+- **UI text (user-visible)**: always in English.
+  - Labels, buttons, checkboxes, tooltips, status texts, placeholders, dialog titles/messages, table headers, empty-state messages.
+  - Exception: the checkbox `"Forzar dimensiones pares (recomendado)"` stays in Spanish - do NOT translate it.
+- **Code comments and debug logs**: always in Spanish (developer language).
+  - `CONDITIONAL_DEBUG(...)`, `qDebug()`, `qWarning()`, inline `//` comments, block `/* */` comments.
+- **Internal error strings** (not rendered in UI): Spanish is fine.
+  - e.g. `error = "Carpeta no encontrada: "` in workers/managers - these are logged, not displayed.
+- When adding new UI text, write it in English. When adding comments or debug output, write in Spanish.
+- **Changelog policy**: `docs/ChangeLog.md` must always be written in castellano (Spanish).
+
+## Tooltip Policy (Mandatory)
+
+- Any new tooltip in this app must use `CustomTooltip`, not native Qt tooltip usage.
+- Use:
+  - `CustomTooltip::instance()->setToolTip(widget, "...");`
+- Do not add direct `widget->setToolTip("...")` in feature/UI code (except inside `CustomTooltip` internals where native tooltips are intentionally cleared).
+- Follow the tooltip behavior and style guide documented in:
+  - `docs/Doc_Tooltip.md`
+- Shortcut lines inside tooltip text must follow the PipeSync pattern exactly:
+  - `"<span style='color:#CDCDCD'><b>Click:</b></span> Action description"`
+  - `"<span style='color:#CDCDCD'><b>Alt+Click:</b></span> Action description"`
+  - `"<span style='color:#CDCDCD'><b>Shift+Click:</b></span> Action description"`
+  - `"<span style='color:#CDCDCD'><b>Ctrl+Shift+Click:</b></span> Action description"` (Windows)

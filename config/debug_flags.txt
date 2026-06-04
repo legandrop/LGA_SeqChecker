@@ -1,0 +1,36 @@
+# debug_flags.txt — LGA MediaTools
+# Estos flags controlan los mensajes de debug en debug.log
+# true  = mostrar mensajes de esa categoria
+# false = silenciar
+
+transcode_steps_stats=true   // siempre mantenerlo en true! escribe otro archivo. no cambiarlo!
+
+
+error=false
+warning=false
+core=false
+AppPathManager=false
+import=false
+ui=false
+fonts=false
+WindowResize=false
+rename=false
+rename_table=false
+rename_preview=false
+rename_ops=false
+folder_mismatch=false
+transcode=false
+transcode_manifest=false
+transcode_progress=false
+python_runner=false
+python_runner_verbose=false
+transcode_table_widths=false
+transcode_expansion=false
+transcode_mov=false
+transcode_timeout=false
+shotname=false
+drag_number_edit=false
+queue_table_widths=false
+queue_render=false
+app_lifecycle=false
+custom_tooltip=false

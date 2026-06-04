@@ -1,0 +1,915 @@
+/* Tema oscuro para PipeSync */
+
+/* 
+Las variables de color se encuentran en el archivo src/mainwindow.cpp
+ */
+
+/* Variables tipográficas */
+/*
+    Inter weights:
+    300 - Light
+    400 - Regular
+    500 - Medium
+    700 - Bold
+*/
+
+/* Estilo general para la aplicación (✅) */
+QWidget {
+    background-color: bg_principal; /* ✅ Fondo del shots tab */
+    color: txt_principal;  /* Color por defecto para body2 */
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 14px;  /* Tamaño body2 en Material-UI */
+    font-weight: 400;  /* Regular weight para body text */
+    line-height: 1.4;  /* Espaciado vertical como en la versión anterior */
+    letter-spacing: 0px;  /* Espaciado de letras sutil */
+}
+
+/* Estilo los labels (aka texto normal) ✅ */
+QLabel {
+    color: txt_principal;  /* Texto normal, dentro de los cards y en toolbar por ejemplo ✅ */
+    background-color: transparent;
+    padding: 2px 0px;
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 14px;  /* Tamaño body2 en Material-UI */
+    font-weight: 400;  /* Regular weight para body text */
+    line-height: 1.4;  /* Espaciado vertical como en la versión anterior */
+    letter-spacing: 0px;  /* Espaciado de letras sutil */
+}
+
+/* ✅✅ Fondo y estilo de los headers de las tablas principales (Rename / Transcode). */
+QTableWidget#renameTable,
+QTableWidget#transcodeTable,
+QTableWidget#netflixPullTable {
+    background-color: bg_items;
+    border: none;
+    border-radius: 8px;
+    color: #a7a7a7;
+    gridline-color: border_principal;
+    outline: none;
+}
+
+QTableWidget#renameTable::item,
+QTableWidget#transcodeTable::item,
+QTableWidget#netflixPullTable::item {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+QTableWidget#renameTable::item:selected,
+QTableWidget#transcodeTable::item:selected,
+QTableWidget#netflixPullTable::item:selected {
+    background-color: #2a2a2a;
+    color: #cccccc;
+}
+
+/* Secciones contenedoras de tablas principales (cards) */
+QWidget#renameTableSection,
+QWidget#transcodeTableSection,
+QWidget#transcodeQueueTableSection,
+QWidget#netflixPullTableSection {
+    background-color: bg_items;
+    border: none;
+    border-radius: 8px;
+}
+
+/* Barra inferior de selección bajo tablas */
+QWidget#renameTableSelectionButtons,
+QWidget#transcodeTableSelectionButtons,
+QWidget#netflixPullTableSelectionButtons {
+    background-color: bg_items;
+    border: none;
+}
+
+QHeaderView::section {
+    background-color: table_header_bg;
+    color: #999999;
+    padding: 4px 6px;
+    border: none;
+    font-weight: bold;
+}
+
+QTableCornerButton::section {
+    background-color: table_header_bg;
+    border: none;
+}
+
+/* ✅✅ Fondo y estilo de los grupos internos de tabla (PUBLISH / PLATES / REFS). */
+QLabel#mediaTableSectionHeader {
+    background-color: table_group_bg;
+    color: #888888;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 3px 8px;
+}
+
+QLabel#mediaTableSectionHeader[mediaSection="PUBLISH"] {
+    color: #3381e0;
+}
+
+QLabel#mediaTableSectionHeader[mediaSection="PLATES"] {
+    color: #6fc9d9;
+}
+
+QLabel#mediaTableSectionHeader[mediaSection="REFS"] {
+    color: #aa9e54;
+}
+
+/* Menús: alineados con popup de dropdowns */
+QMenuBar {
+    background-color: bg_principal;
+    color: txt_principal;
+}
+
+QMenuBar::item:selected {
+    background-color: #4b4b4b;
+    color: #d0d0d0;
+}
+
+QMenu {
+    background-color: #1a1a1a;
+    color: txt_input;
+    border: 1px solid #2f2f2f;
+}
+
+QMenu::item {
+    padding: 6px 14px;
+}
+
+QMenu::item:selected {
+    background-color: #4b4b4b;
+    color: #d0d0d0;
+}
+
+
+
+/* ------------------------------ Estilos para botones ✅ ------------------------------ */
+/* Botón primario gris ✅ */
+QPushButton {
+    background-color: boton_gris_oscuro;
+    color: txt_principal;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 14px;
+    font-weight: 450;
+    letter-spacing: 0px;
+
+}
+
+QPushButton:hover {
+    background-color: boton_gris_oscu_hover;
+}
+
+QPushButton:pressed {
+    background-color: boton_gris_oscu_hover;
+}
+
+QPushButton:disabled {
+    background-color: boton_gris_oscuro;
+    color: #9D9D9D;
+}
+
+/* Botón chico de acción secundaria centralizado (presets + queue) */
+QPushButton#uiSmallActionButton {
+    background-color: ui_small_action_button_bg_color;
+    color: ui_small_action_button_text_color;
+    border: 1px solid ui_small_action_button_border_color;
+    padding: ui_small_action_button_padding_y ui_small_action_button_padding_x;
+    border-radius: ui_small_action_button_border_radius;
+    font-size: ui_small_action_button_font_size;
+}
+
+QPushButton#uiSmallActionButton:hover {
+    background-color: ui_small_action_button_bg_color_hover;
+    color: ui_small_action_button_text_color_hover;
+}
+
+QPushButton#uiSmallActionButton:pressed {
+    background-color: ui_small_action_button_bg_color_hover;
+    color: ui_small_action_button_text_color_hover;
+}
+
+QPushButton#uiSmallActionButton:disabled {
+    background-color: ui_small_action_button_bg_color_disabled;
+    color: ui_small_action_button_text_color_disabled;
+}
+
+/* Progress bar del dialogo de descarga de actualizacion */
+QProgressBar {
+    background-color: #393959;
+    border: 1px solid #444;
+    border-radius: 4px;
+    text-align: center;
+    color: #cccccc;
+    font-size: 13px;
+    font-family: "Inter", Arial, Helvetica;
+    min-height: 18px;
+    max-height: 18px;
+}
+
+QProgressBar::chunk {
+    background-color: #443a91;
+    border-radius: 3px;
+}
+
+/* Botones de seleccion por tipo bajo tablas Rename/Transcode. Sin borde. */
+QPushButton#uiTableSelectionButton {
+    background-color: ui_table_selection_button_bg_color;
+    color: ui_table_selection_button_text_color;
+    border: none;
+    padding: ui_table_selection_button_padding_y ui_table_selection_button_padding_x;
+    border-radius: ui_table_selection_button_border_radius;
+    font-size: ui_table_selection_button_font_size;
+    font-weight: 400;
+}
+
+QPushButton#uiTableSelectionButton:hover {
+    background-color: ui_table_selection_button_bg_color_hover;
+    color: ui_table_selection_button_text_color_hover;
+}
+
+QPushButton#uiTableSelectionButton:pressed {
+    background-color: ui_table_selection_button_bg_color_pressed;
+    color: ui_table_selection_button_text_color_hover;
+}
+
+/* Botones Clear Selected / Clear File Lists (derecha de la fila de selección) */
+QPushButton#uiClearAllTablesButton,
+QPushButton#uiClearSelectedTablesButton {
+    background-color: ui_clear_all_tables_button_bg_color;
+    color: ui_clear_all_tables_button_text_color;
+    border: ui_clear_all_tables_button_border_width solid ui_clear_all_tables_button_border_color;
+    padding: 4px 12px;
+    border-radius: ui_clear_all_tables_button_border_radius;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+QPushButton#uiClearAllTablesButton:hover,
+QPushButton#uiClearSelectedTablesButton:hover {
+    background-color: ui_clear_all_tables_button_bg_color_hover;
+    color: ui_clear_all_tables_button_text_color_hover;
+}
+
+QPushButton#uiClearAllTablesButton:pressed,
+QPushButton#uiClearSelectedTablesButton:pressed {
+    background-color: ui_clear_all_tables_button_bg_color_pressed;
+    color: ui_clear_all_tables_button_text_color_pressed;
+}
+
+QPushButton#uiClearAllTablesButton:disabled,
+QPushButton#uiClearSelectedTablesButton:disabled {
+    background-color: ui_clear_all_tables_button_bg_color_disabled;
+    border-color: ui_clear_all_tables_button_border_color_disabled;
+    color: ui_clear_all_tables_button_text_color_disabled;
+}
+
+/* Botón secundario (gris) ✅ */
+QPushButton.secondary {
+    background-color: #3b3b3b; /* ✅ */
+    color: txt_principal;
+    border-radius: 13px;
+}
+
+QPushButton.secondary:hover {
+    background-color: #636363; /* ✅ */
+}
+
+QPushButton.secondary:pressed {
+    background-color:   ; /* ✅ */
+}
+
+
+/*  Botón de acción (violeta) ✅ */
+QPushButton.action {
+    background-color: violeta_oscuro; /* ✅ */
+    color: txt_principal;
+    font-weight: bold;
+    font-size: 11pt;
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 0.65rem;  /* Tamaño para botones de acción */
+    font-weight: 700;  /* Bold weight */
+}
+
+QPushButton.action:hover {
+    background-color: violeta_claro; /* ✅ */
+}
+
+QPushButton.action:pressed {
+    background-color: violeta_claro; /* ✅ */
+}
+
+
+
+
+/* ------------------------------ Estilos para campos de entrada de texto y dropdowns ✅ ------------------------------ */
+QLineEdit, QTextEdit {
+    background-color: #1a1a1a;
+    color: txt_input;
+    placeholder-text-color: txt_input_placeholder;
+    border: 1px solid #2f2f2f;
+    padding: ui_field_padding_y ui_field_padding_x; /* ✅✅ altura inputs */
+    border-radius: 3px;
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 15px;
+    font-weight: 400;
+    selection-background-color: #4b4b4b;
+    selection-color: #d0d0d0;
+}
+QLineEdit:focus, QTextEdit:focus {
+    border: 1px solid #555555;
+}
+
+/* Spinboxes base (alineados al estilo de inputs) */
+QSpinBox {
+    background-color: #1a1a1a;
+    color: txt_input;
+    border: 1px solid #2f2f2f;
+    padding: ui_field_padding_y ui_field_padding_x; /* ✅✅ altura spinboxes */
+    border-radius: 3px;
+    min-height: 20px;
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 15px;
+    font-weight: 400;
+    selection-background-color: #4b4b4b;
+    selection-color: #d0d0d0;
+}
+
+QSpinBox:focus {
+    border: 1px solid #555555;
+}
+
+/* Variante con flechas custom (ArrowSpinBox + QPainter) */
+QSpinBox#uiArrowSpinBox {
+    padding: ui_field_padding_y 24px ui_field_padding_y ui_field_padding_x; /* ✅✅ altura spinboxes con flechas */
+}
+
+QSpinBox#uiArrowSpinBox::up-button,
+QSpinBox#uiArrowSpinBox::down-button {
+    subcontrol-origin: padding;
+    width: 20px;
+    border-left: 1px solid #2f2f2f;
+    background: transparent;
+}
+
+QSpinBox#uiArrowSpinBox::up-button {
+    subcontrol-position: top right;
+    border-bottom: 1px solid #2f2f2f;
+}
+
+QSpinBox#uiArrowSpinBox::down-button {
+    subcontrol-position: bottom right;
+}
+
+QSpinBox#uiArrowSpinBox:focus::up-button,
+QSpinBox#uiArrowSpinBox:focus::down-button {
+    border-left: 1px solid #555555;
+}
+
+QSpinBox#uiArrowSpinBox:focus::up-button {
+    border-bottom: 1px solid #555555;
+}
+
+/* Flecha nativa oculta; ArrowSpinBox la pinta con QPainter usando txt_input. */
+QSpinBox#uiArrowSpinBox::up-arrow,
+QSpinBox#uiArrowSpinBox::down-arrow {
+    image: none;
+    width: 0px;
+    height: 0px;
+    border: none;
+}
+
+/* Variante compacta para spinboxes sin flechas (ej: DWAA level) */
+QSpinBox#uiCompactSpinBox {
+    padding: 2px 6px;
+    min-height: 18px;
+}
+
+/* Estilo para dropdowns comunes (LOS DE SETTINGS SON ESTOS) (solo la caja sin desplegar) ✅ */
+QComboBox {
+    background-color: #1a1a1a;
+    color: txt_input;
+    border: 1px solid #2f2f2f;
+    padding: ui_field_padding_y ui_field_padding_x; /* ✅✅ altura dropdowns */
+    border-radius: 3px;
+    min-height: 20px;
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 15px;
+    font-weight: 400;
+    selection-background-color: #4b4b4b;
+    selection-color: #d0d0d0;
+}
+
+QComboBox:focus {
+    border: 1px solid #555555;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #1a1a1a;
+    border: 1px solid #2f2f2f;
+    color: txt_input;
+    selection-background-color: #4b4b4b;
+    selection-color: #d0d0d0;
+}
+
+QComboBox QAbstractItemView::item {
+    background-color: #1a1a1a;
+}
+
+QComboBox QAbstractItemView::item:selected {
+    background-color: #4b4b4b;
+    color: #d0d0d0;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid #2f2f2f;
+}
+
+QComboBox:focus::drop-down {
+    border-left: 1px solid #555555;
+}
+
+/* Flecha nativa oculta; ArrowComboBox la pinta con QPainter usando txt_input. */
+QComboBox::down-arrow {
+    image: none;
+    width: 0px;
+    height: 0px;
+    border: none;
+}
+
+/* Combo especial CPU del footer de Transcode Queue (sobre fondo oscuro). */
+QComboBox#queueCpuCombo {
+    background-color: #1c1c1c; /* ✅✅ color especial del dropdown CPU */
+}
+
+QComboBox#queueCpuCombo QAbstractItemView,
+QComboBox#queueCpuCombo QAbstractItemView::item {
+    background-color: #1c1c1c; /* ✅✅ color especial del popup CPU */
+}
+
+/* Estilo específico para el dropdown del toolbar */
+QComboBox#projectFilter, QComboBox#statusFilter, QComboBox#sortOrderFilter, QComboBox#assigneeFilter {
+    padding: 2px 8px;
+    border-radius: 3px;
+    min-height: 20px;
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+QComboBox#projectFilter:focus, QComboBox#statusFilter:focus, QComboBox#sortOrderFilter:focus, QComboBox#assigneeFilter:focus {
+    border: 1px solid #555555;
+}
+
+QComboBox#statusFilter {
+    combobox-popup: 0;
+}
+
+QComboBox#projectFilter::drop-down, QComboBox#statusFilter::drop-down, QComboBox#sortOrderFilter::drop-down, QComboBox#assigneeFilter::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid #2f2f2f;
+}
+
+QComboBox#projectFilter:focus::drop-down, QComboBox#statusFilter:focus::drop-down, QComboBox#sortOrderFilter:focus::drop-down, QComboBox#assigneeFilter:focus::drop-down {
+    border-left: 1px solid #555555;
+}
+
+/* Flecha nativa oculta; ArrowComboBox la pinta con QPainter usando txt_input. */
+QComboBox#projectFilter::down-arrow, QComboBox#statusFilter::down-arrow, QComboBox#sortOrderFilter::down-arrow, QComboBox#assigneeFilter::down-arrow {
+    image: none;
+    width: 0px;
+    height: 0px;
+    border: none;
+}
+
+/* Estilo específico para el filtro de proyectos cuando está filtrado (flecha roja) */
+QComboBox#projectFilter[filtered="true"]::down-arrow {
+    image: url(:/icons/dropdown_arrow_red.svg);
+    width: 8px;
+    height: 8px;
+    border: none;
+}
+
+/* Estilo específico para el filtro de status cuando está filtrado (flecha roja) */
+QComboBox#statusFilter[filtered="true"]::down-arrow {
+    image: url(:/icons/dropdown_arrow_red.svg);
+    width: 8px;
+    height: 8px;
+    border: none;
+}
+
+QComboBox#statusFilter QAbstractItemView {
+    background-color: #1a1a1a;
+    border: 1px solid #2f2f2f;
+    color: txt_input;
+    selection-background-color: #4b4b4b;
+    selection-color: #d0d0d0;
+}
+
+QComboBox#statusFilter QAbstractItemView::item {
+    background-color: #1a1a1a;
+}
+
+QComboBox#statusFilter QAbstractItemView::item:selected {
+    background-color: #4b4b4b;
+    color: #d0d0d0;
+}
+
+/* Estilo específico para el filtro de assignees cuando está filtrado (flecha roja) */
+QComboBox#assigneeFilter[filtered="true"]::down-arrow {
+    image: url(:/icons/dropdown_arrow_red.svg);
+    width: 8px;
+    height: 8px;
+    border: none;
+}
+
+
+
+/* ------------------------------ Estilos para Settings ✅ ------------------------------ */
+
+/* Estilo para los TITULOS de cada campo de entreda de texto que estan sobre las lineas de los bordes ✅ */
+QLabel#fieldLabel {
+    background-color: bg_items; 
+    padding: 0 2px;
+    color: txt_principal;
+    font-weight: normal;
+    font-size: 9pt;
+    border: none;
+    margin-bottom: 20px;
+    position: relative;
+    width: auto !important;
+    min-width: 0;
+}
+
+
+/* Estilo para los titulos de cada sección de settings (Wasabi, Flow, etc) ✅ */
+QLabel#sectionTitle {
+    color: #E0E0E0;
+    font-family: "Inter", Arial, Helvetica;
+    font-weight: 500;  /* Inter Medium weight */
+    font-size: 20px;   /* Equivalente a h6 en Material-UI */
+    letter-spacing: 0px;  /* Espaciado de letras típico de h6 */
+}
+
+
+/* Estilo para los resultados de los tests de settings  */
+QTextEdit#wasabiStatusLabel, QTextEdit#flowStatusLabel {
+    background-color: bg_items;
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;      /* Color del texto seleccionado */
+}
+
+/* Estilo para fondos de cada widget de settings ✅ */
+QGroupBox {
+    background-color: bg_items; /* Fondo de cada grupo contenedor ✅ */
+    border: 1px solid #0909F4;  /* (❌❌❌) */
+    border-radius: 4px;
+    margin-top: 1ex;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+
+/* Estilo para el texto del checkbox de settings ✅ */
+QCheckBox {
+    color: txt_principal; /* Texto del checkbox de settings ✅ */
+    padding: 5px;
+    background-color: transparent;
+    border: none;
+}
+
+QCheckBox:hover,
+QCheckBox:pressed,
+QCheckBox:focus,
+QCheckBox:checked,
+QCheckBox:unchecked {
+    background-color: transparent;
+    border: none;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    background-color: checkbox_bg_off; /* Fondo centralizado (destildado) */
+    border: 1px solid border_principal; /* Borde del checkbox sin seleccionar ✅ */
+    border-radius: 3px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: checkbox_bg_on;   /* Fondo centralizado (tildado) */
+    image: url(:/icons/checkmark.svg);
+}
+
+QCheckBox::indicator:unchecked:hover,
+QCheckBox:hover::indicator:unchecked {
+    background-color: checkbox_bg_off_hover;
+}
+
+QCheckBox::indicator:checked:hover,
+QCheckBox:hover::indicator:checked {
+    background-color: checkbox_bg_on_hover;
+}
+
+/* Checkbox dentro de tablas: mismo indicador, sin padding extra para evitar crop en celdas chicas */
+QCheckBox#tableRowCheckbox {
+    padding: 0;
+    margin: 0;
+    spacing: 0;
+    background: transparent;
+}
+
+QCheckBox#tableRowCheckbox::indicator {
+    width: 16px;
+    height: 16px;
+}
+
+/* Celda contenedora del checkbox en tablas: transparente para respetar fondo de fila */
+QWidget#tableCheckCell {
+    background: transparent;
+    border: none;
+}
+
+/* Checkboxes de opciones (no tabla): compactos y siempre transparentes */
+QCheckBox#uiOptionCheckbox {
+    color: control_section_label_color;
+    padding: 2px;
+    background: transparent;
+    border: none;
+}
+
+QCheckBox#uiOptionCheckbox:hover,
+QCheckBox#uiOptionCheckbox:pressed,
+QCheckBox#uiOptionCheckbox:focus,
+QCheckBox#uiOptionCheckbox:checked,
+QCheckBox#uiOptionCheckbox:unchecked {
+    background: transparent;
+    border: none;
+}
+
+
+
+
+/* ------------------------------ Estilos para scrollbars ------------------------------ */
+/* Scrollbars dentro de tablas: mantener fondo de card (#1d1d1d) */
+QTableWidget QScrollBar:vertical,
+QTableWidget QScrollBar:horizontal {
+    background-color: bg_items;
+}
+
+QTableWidget QScrollBar::add-page:vertical,
+QTableWidget QScrollBar::sub-page:vertical,
+QTableWidget QScrollBar::add-page:horizontal,
+QTableWidget QScrollBar::sub-page:horizontal {
+    background-color: bg_items;
+}
+
+/* Estilo para scrollbars */
+QScrollBar:vertical {
+    background-color: bg_principal; /* Fondo del scrollbar ✅ */
+    width: 12px;
+    margin: 0px;
+    border-radius: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: bg_items; /* Color del scrollbar ✅ */
+    min-height: 30px;
+    border-radius: 3px;
+    margin: 2px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: border_principal; /* Color del scrollbar en hover ✅ */
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+    background: none;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+QScrollBar:horizontal {
+    background-color: bg_principal; /* Fondo del scrollbar horizontal 🟠 */
+    height: 12px;
+    margin: 0px;
+    border-radius: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: bg_items; /* Color del scrollbar horizontal 🟠 */
+    min-width: 30px;
+    border-radius: 3px;
+    margin: 2px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background-color: border_principal; /* Color del scrollbar horizontal en hover 🟠 */
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+    background: none;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: none;
+}
+
+/* Estilo específico para el área de desplazamiento (❌❌❌) */
+QScrollArea#darkScrollArea {
+    background-color: #009198;
+    border: none;
+}
+
+/* Estilo para el widget central de settings (el fondo de todo el widget) ✅*/
+QScrollArea#darkScrollArea QWidget#centralSettingsWidget {
+    background-color: bg_principal; /* ✅ */
+    padding-bottom: 20px; /* Añadir espacio en la parte inferior para evitar que el contenido quede cortado */
+}
+
+/* Estilo para el widget de settings (el fondo que rodea a los contenedores de cada seccion) ✅*/
+QScrollArea#darkScrollArea QWidget#contentSettingsWidget {
+    background-color: bg_principal; /* ✅ */
+}
+
+
+
+
+
+/* ------------------------------ Estilos para grupos ❌❌❌ ------------------------------ */
+/* Estilo para grupos */
+QGroupBox {
+    background-color: bg_items; /* Fondo de cada grupo contenedor ✅ */
+    border: 1px solid #0909F4;  /* (❌❌❌) */
+    border-radius: 4px;
+    margin-top: 1ex;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
+    color: #ACFB19;   /* (❌❌❌) */
+    font-weight: bold;
+    background-color: #E59628; /* (❌❌❌) */
+    margin-left: 8px;
+    font-family: "Inter", Arial, Helvetica;
+    font-weight: 900;  /* Black weight */
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+}
+
+/* Estilo para el grupo de Wasabi sin borde */
+QGroupBox#wasabiGroup {
+    border: none;
+}
+
+
+
+
+
+
+/* ------------------------------ Estilo general para selección de texto ✅ ------------------------------ */
+* {
+    selection-background-color: #383838;  /* Color de fondo de la selección ✅ */
+    selection-color: #ffffff;            /* Color del texto seleccionado ✅ */
+}
+
+
+
+
+
+
+/* ------------------------------ Estilos específicos para el dropdown de status y su popup ------------------------------ */
+QComboBox#statusComboBox {
+    background-color: #1a1a1a;
+    color: txt_input;
+    border: 1px solid #2f2f2f;
+    border-radius: 3px;
+    padding: 0 8px;
+    min-height: 24px;
+    max-height: 24px;
+    font-size: 13px;
+    font-family: "Inter", Arial, Helvetica;
+}
+
+QComboBox#statusComboBox:focus {
+    border: 1px solid #555555;
+}
+
+/* Centrar el texto y hacer toda el área clickeable */
+QComboBox#statusComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: right;
+    width: 28px;
+    border: none;
+    background: transparent;
+}
+
+QComboBox#statusComboBox::down-arrow {
+    image: none;
+    width: 0px;
+    height: 0px;
+    border: none;
+}
+
+/* Estilo para el texto cuando el combobox está cerrado */
+QComboBox#statusComboBox {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* Estilos para el popup */
+QComboBox#statusComboBox QAbstractItemView {
+    background-color: #1a1a1a;
+    border: 1px solid #2F2F2F;
+    border-radius: 3px;
+    padding: 4px;
+    color: txt_input;
+    selection-background-color: #4b4b4b;
+    selection-color: #d0d0d0;
+}
+
+QComboBox#statusComboBox QAbstractItemView::item {
+    min-height: 32px;
+    padding: 4px 8px;
+}
+
+QComboBox#statusComboBox QAbstractItemView::item:selected {
+    background-color: #4b4b4b;
+    color: #d0d0d0;
+}
+
+
+
+
+/* ------------------------------ Estilos para la tabla de versiones ------------------------------ */
+QWidget#shotCardVersions {
+    background-color: transparent;
+}
+
+QWidget#versionRow {
+    background-color: transparent;
+}
+
+QWidget#versionLocalGroup, QWidget#versionRemoteGroup {
+    background-color: transparent;
+}
+
+/* Contenedores para el texto MOV Review y el botón FlowNotes */
+QWidget#movReviewTextContainer {
+    background-color: transparent;
+    margin-right: 0;
+    padding-right: 0;
+}
+
+QWidget#flowNotesButtonContainer {
+    background-color: transparent;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+QLabel#versionTypeLabel {
+    color: #ADADAD;
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 14px;
+    font-weight: 500;
+    background-color: transparent;
+}
+
+QLabel#versionNumberLabel {
+    color: #ADADAD;
+    font-family: "Inter", Arial, Helvetica;
+    font-size: 14px;
+    font-weight: 500;
+    background-color: transparent;
+}
+
+
+/* ------------------------------ Estilos para tooltips personalizados ------------------------------ */
+/* Estilo para el tooltip */
+QLabel#tooltipLabel {
+    color: txt_principal;
+    background-color: transparent;
+    font-family: "Inter", Arial, Helvetica;
+    font-weight: 400;
+    letter-spacing: 0px;
+    padding: 0px;
+    margin: 0;
+    width: auto;
+    /* font-size: centralizado en codigo (CustomTooltip.cpp, kTooltipFontPixelSize).
+       El QLabel de rich text no aplica el font-size del stylesheet de forma confiable. */
+}

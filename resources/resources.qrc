@@ -1,0 +1,20 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>styles/dark_theme.qss</file>
+        <file>styles/tabs.qss</file>
+        <file>icons/SeqChecker.svg</file>
+        <file>fonts/Roboto-Regular.ttf</file>
+        <file>fonts/Roboto-Medium.ttf</file>
+        <file>fonts/Roboto-Bold.ttf</file>
+        <file>fonts/Inter-Regular.ttf</file>
+        <file>fonts/Inter-Medium.ttf</file>
+        <file>fonts/Inter-Bold.ttf</file>
+        <file>fonts/Inter_18pt-Regular.ttf</file>
+        <file>fonts/Inter_18pt-Bold.ttf</file>
+        <file>fonts/Inter_18pt-Medium.ttf</file>
+        <file>fonts/Inter_18pt-SemiBold.ttf</file>
+        <file>fonts/Inter_18pt-Light.ttf</file>
+        <file>fonts/georgia.ttf</file>
+    </qresource>
+</RCC>

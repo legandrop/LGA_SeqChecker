@@ -27,8 +27,16 @@
 #include <QSettings>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QDesktopServices>
 #include <QColor>
+#include <QDialog>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QDialogButtonBox>
+#include <QApplication>
+#include <QClipboard>
+#include <QFont>
 
 namespace {
 // Columnas de la tabla de resultados.
@@ -105,6 +113,15 @@ void MainWindow::buildUi()
 
     m_statusLabel = new QLabel("Drop a folder anywhere to scan for corrupt EXR sequences.", central);
     m_statusLabel->setObjectName("statusLabel");
+    m_statusLabel->setTextFormat(Qt::RichText);
+    m_statusLabel->setOpenExternalLinks(false);
+    m_statusLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    // El link "N corrupt frames" del status abre el listado global de corruptos.
+    connect(m_statusLabel, &QLabel::linkActivated, this, [this](const QString &href) {
+        if (href == "corrupt" && !m_allCorruptFiles.isEmpty()) {
+            showCorruptDialog("All corrupt frames", m_allCorruptFiles);
+        }
+    });
     root->addWidget(m_statusLabel);
 
     m_table = new QTableWidget(0, ColCount, central);
@@ -136,8 +153,20 @@ void MainWindow::buildUi()
     m_table->setColumnWidth(ColCorrupt, 75);
     m_table->setColumnWidth(ColStatus, 110);
 
+    // Click en la celda Corrupt (con >0) abre el listado copiable de esa secuencia.
+    connect(m_table, &QTableWidget::cellClicked, this, [this](int row, int col) {
+        if (col != ColCorrupt) return;
+        QTableWidgetItem *it = m_table->item(row, ColCorrupt);
+        if (!it) return;
+        const QStringList files = it->data(Qt::UserRole).toStringList();
+        if (files.isEmpty()) return;
+        const QString name = m_table->item(row, ColSequence) ? m_table->item(row, ColSequence)->text() : QString();
+        showCorruptDialog("Corrupt frames — " + name, files);
+    });
+
     // Doble-click revela la carpeta de la secuencia.
-    connect(m_table, &QTableWidget::cellDoubleClicked, this, [this](int row, int) {
+    connect(m_table, &QTableWidget::cellDoubleClicked, this, [this](int row, int col) {
+        if (col == ColCorrupt) return; // esa columna usa click simple para el listado
         QTableWidgetItem *it = m_table->item(row, ColFolder);
         if (!it) return;
         const QString folder = it->data(Qt::UserRole).toString();
@@ -340,6 +369,7 @@ void MainWindow::resetResults()
 {
     m_table->setRowCount(0);
     m_seqRowById.clear();
+    m_allCorruptFiles.clear();
     m_totalFrames = 0;
     m_doneFrames = 0;
     m_corruptTotal = 0;
@@ -404,19 +434,36 @@ void MainWindow::onPythonLine(const QString &line)
         QTableWidgetItem *sit = m_table->item(row, ColStatus);
         sit->setText(statusLabelText(status));
         sit->setForeground(statusColor(status));
-        m_table->item(row, ColCorrupt)->setForeground(statusColor(corrupt > 0 ? "corrupt" : "ok"));
-        // Tooltip con el detalle de frames problemáticos.
+
+        // Paths corruptos: se guardan en la celda Corrupt (click simple abre el listado).
+        QStringList corruptFiles;
+        for (const QJsonValue &v : o.value("corrupt_files").toArray()) {
+            corruptFiles << v.toString();
+        }
+        QTableWidgetItem *cit = m_table->item(row, ColCorrupt);
+        cit->setForeground(statusColor(corrupt > 0 ? "corrupt" : "ok"));
+        if (corrupt > 0) {
+            cit->setData(Qt::UserRole, corruptFiles);
+            QFont f = cit->font();
+            f.setUnderline(true);
+            cit->setFont(f);
+            cit->setToolTip("Click to list & copy corrupt frame paths");
+            m_allCorruptFiles += corruptFiles;
+        }
+
+        // Tooltip con el detalle de frames problemáticos en el resto de las celdas.
         const QString detail = o.value("detail").toString();
         if (!detail.isEmpty()) {
-            for (int c = 0; c < ColCount; ++c) m_table->item(row, c)->setToolTip(detail);
+            for (int c = 0; c < ColCount; ++c) {
+                if (c == ColCorrupt && corrupt > 0) continue;
+                m_table->item(row, c)->setToolTip(detail);
+            }
         }
         m_corruptTotal += corrupt;
     } else if (tag == "MT_DONE") {
-        const int seqs = o.value("sequences").toInt();
-        const int corrupt = o.value("corrupt").toInt();
-        const int suspect = o.value("suspect").toInt();
-        setStatusText(QString("Done — %1 sequences, %2 corrupt frames, %3 suspect.")
-                          .arg(seqs).arg(corrupt).arg(suspect));
+        setStatusDone(o.value("sequences").toInt(),
+                      o.value("corrupt").toInt(),
+                      o.value("suspect").toInt());
     }
 }
 
@@ -438,7 +485,62 @@ void MainWindow::onPythonFinished(int exitCode, const QString &, const QString &
 
 void MainWindow::setStatusText(const QString &text)
 {
-    if (m_statusLabel) m_statusLabel->setText(text);
+    if (m_statusLabel) m_statusLabel->setText(text.toHtmlEscaped());
+}
+
+void MainWindow::setStatusDone(int sequences, int corrupt, int suspect)
+{
+    if (!m_statusLabel) return;
+    // El conteo de corruptos se muestra como link clickeable que abre el listado global.
+    QString corruptPart;
+    if (corrupt > 0) {
+        corruptPart = QString("<a href=\"corrupt\" style=\"color:%1; font-weight:600;\">%2 corrupt frames</a>")
+                          .arg(COL_STATUS_CORRUPT).arg(corrupt);
+    } else {
+        corruptPart = "0 corrupt frames";
+    }
+    m_statusLabel->setText(QString("Done — %1 sequences · %2 · %3 suspect.")
+                               .arg(sequences).arg(corruptPart).arg(suspect));
+}
+
+void MainWindow::showCorruptDialog(const QString &title, const QStringList &files)
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(title);
+    dlg.resize(720, 460);
+
+    auto *lay = new QVBoxLayout(&dlg);
+    lay->setContentsMargins(12, 12, 12, 12);
+    lay->setSpacing(10);
+
+    auto *info = new QLabel(QString("%1 corrupt frame(s). Select text and copy, or use \"Copy all\".")
+                               .arg(files.size()), &dlg);
+    info->setStyleSheet(QString("color:%1; font-family:'Inter'; font-size:13px;").arg(COL_TXT_PRINCIPAL));
+    lay->addWidget(info);
+
+    auto *text = new QPlainTextEdit(&dlg);
+    text->setReadOnly(true);
+    text->setLineWrapMode(QPlainTextEdit::NoWrap);
+    text->setPlainText(files.join("\n"));
+    text->setStyleSheet(QString(
+        "QPlainTextEdit { background:%1; color:%2; border:1px solid %3; border-radius:4px;"
+        " font-family:'Roboto Mono','Consolas',monospace; font-size:12px; padding:6px; }"
+    ).arg("#1a1a1a").arg("#9a9a9a").arg(COL_BORDER));
+    lay->addWidget(text, 1);
+
+    auto *buttons = new QDialogButtonBox(&dlg);
+    auto *copyBtn = buttons->addButton("Copy all", QDialogButtonBox::ActionRole);
+    auto *closeBtn = buttons->addButton(QDialogButtonBox::Close);
+    lay->addWidget(buttons);
+
+    connect(copyBtn, &QPushButton::clicked, &dlg, [files, info]() {
+        QApplication::clipboard()->setText(files.join("\n"));
+        info->setText(QString("Copied %1 path(s) to clipboard.").arg(files.size()));
+    });
+    connect(closeBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+
+    dlg.setStyleSheet(QString("QDialog { background:%1; }").arg(COL_BG_PRINCIPAL));
+    dlg.exec();
 }
 
 // ----------------------------------------------------------------------------

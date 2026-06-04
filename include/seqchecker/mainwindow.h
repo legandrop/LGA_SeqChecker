@@ -77,6 +77,8 @@ private:
     void resetResults();
     int rowForSeqId(const QString &id, bool createIfMissing);
     void setStatusText(const QString &text);
+    void setStatusDone(int sequences, int corrupt, int suspect);
+    void showCorruptDialog(const QString &title, const QStringList &files);
 
     QString     m_pythonExe;
     QString     m_scriptPath;
@@ -91,6 +93,7 @@ private:
     QTimer       *m_geometrySaveTimer = nullptr;
 
     QHash<QString, int> m_seqRowById; // seq id -> fila de la tabla
+    QStringList m_allCorruptFiles;    // agregado global de paths corruptos
     int m_totalFrames = 0;
     int m_doneFrames = 0;
     int m_corruptTotal = 0;

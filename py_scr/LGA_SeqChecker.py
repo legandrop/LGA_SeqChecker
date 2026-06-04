@@ -260,17 +260,22 @@ def analyze(folders, workers):
 
             ok_n = suspect_n = corrupt_n = 0
             issues = []
+            corrupt_files = []   # paths completos de frames corruptos (para el dialogo)
+            suspect_files = []   # paths completos de frames sospechosos
             for p, ok, detail, sig in results:
                 base = os.path.basename(p)
                 if not ok:
                     corrupt_n += 1
+                    corrupt_files.append(p)
                     issues.append("CORRUPT {} — {}".format(base, detail))
                 elif p in size_suspect:
                     suspect_n += 1
+                    suspect_files.append(p)
                     issues.append("SUSPECT {} — file size {}% of median".format(
                         base, int(100 * sizes[p] / median) if median else 0))
                 elif mode_sig and sig and sig != mode_sig:
                     suspect_n += 1
+                    suspect_files.append(p)
                     issues.append("SUSPECT {} — header {} != {}".format(base, sig, mode_sig))
                 else:
                     ok_n += 1
@@ -299,6 +304,8 @@ def analyze(folders, workers):
                 "corrupt": corrupt_n,
                 "status": status,
                 "detail": "\n".join(issues),
+                "corrupt_files": corrupt_files,
+                "suspect_files": suspect_files,
             })
 
     emit("MT_DONE", {

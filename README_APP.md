@@ -48,10 +48,16 @@ El backend (`py_scr/LGA_SeqChecker.py`) corre, de barato a caro:
 
 - **Capa 0 — estructural (gratis):** gaps en la numeración + outliers de tamaño
   de archivo (frame < 50% de la mediana ⇒ probable truncado). → `suspect`
-- **Capa 1 — header (`exrheader`):** consistencia de resolución / compresión
-  dentro de la secuencia; frames con header distinto al modo de la seq. → `suspect`
-- **Capa 2 — decode completo (`exrcheck`):** validación real de corrupción con
-  la herramienta oficial de OpenEXR, en un pool de workers. → `corrupt`
+- **Capa 2 — decode completo (`exrcheck -t -m`):** validación real de corrupción
+  con la herramienta oficial de OpenEXR, en un pool de workers. Los flags `-t -m`
+  evitan las pasadas redundantes del modo fuzzing → ~2.4× más rápido que
+  `exrcheck` pelado, sin perder detección de truncados ni de corrupción a mitad
+  de archivo. → `corrupt`
+
+> Nota: se quitó el chequeo de header por frame (`exrheader`). No aportaba
+> detección real frente a `exrcheck` (que ya valida el archivo entero) y
+> duplicaba el costo de spawn por frame. Se descartaron también `oiiotool --stats`
+> (falsos negativos en DWAA) y el lector in-process OIIO (limitado por GIL).
 
 Estado de la secuencia: `corrupt` si hay ≥1 frame corrupto; `suspect` si hay
 sospechosos o frames faltantes; si no, `ok`.

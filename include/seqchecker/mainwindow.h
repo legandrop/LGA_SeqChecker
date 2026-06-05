@@ -47,6 +47,8 @@ class QMimeData;
 class QWidget;
 class QLabel;
 class QTableWidget;
+class QCheckBox;
+class QComboBox;
 class QTimer;
 class PythonRunner;
 
@@ -63,6 +65,7 @@ private:
     void loadWindowSettings();
     void saveWindowSettings();
     void scheduleGeometrySave();
+    QString settingsFilePath() const;
 
     // Drag & drop overlay (1 zona).
     void createDropOverlay();
@@ -79,6 +82,10 @@ private:
     void setStatusText(const QString &text);
     void setStatusDone(int sequences, int corrupt, int suspect);
     void showCorruptDialog(const QString &title, const QStringList &files);
+    void populateCpuPresetCombo();
+    void applyCpuPresetSelection(const QString &presetName);
+    int selectedWorkerCount() const;
+    void setKeepOnTopState(bool enabled);
 
     QString     m_pythonExe;
     QString     m_scriptPath;
@@ -90,10 +97,16 @@ private:
     QWidget      *m_dropOverlay = nullptr;
     QWidget      *m_dropOverlayPane = nullptr;
     QLabel       *m_dropOverlayLabel = nullptr;
+    QCheckBox    *m_keepOnTopChk = nullptr;
+    QComboBox    *m_cpuCombo = nullptr;
     QTimer       *m_geometrySaveTimer = nullptr;
 
     QHash<QString, int> m_seqRowById; // seq id -> fila de la tabla
     QStringList m_allCorruptFiles;    // agregado global de paths corruptos
+    QString m_lastShotForColor;
+    QString m_cpuPresetName = "High";
+    bool m_keepOnTop = false;
+    int m_shotColorBlock = -1;
     int m_totalFrames = 0;
     int m_doneFrames = 0;
     int m_corruptTotal = 0;

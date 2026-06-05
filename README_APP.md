@@ -10,8 +10,19 @@ recursivamente todas las secuencias `.exr` que se encuentren.
 2. Arrastrar carpeta(s) a la ventana → overlay de drop (1 zona).
 3. Al soltar arranca el análisis automático. Los resultados aparecen por
    secuencia en la tabla, con conteo de frames OK / Suspect / Corrupt y estado.
-4. Doble-click en una fila abre la carpeta de la secuencia. El tooltip de la
+4. En el footer se puede ajustar `CPU` (presets High/Medium/Low/Minimal) para
+   definir la cantidad de workers Python a usar en el próximo análisis.
+5. Doble-click en una fila abre la carpeta de la secuencia. El tooltip de la
    fila lista los frames con problema.
+
+## Tabla de resultados (UI)
+
+- Headers en modo `Interactive`: las columnas ahora se pueden resizear
+  manualmente desde el header (incluyendo `Sequence` y `Folder`).
+- `Folder` conserva el path completo como tooltip y la tabla permite scroll
+  horizontal para evitar truncados permanentes.
+- La columna `Sequence` usa detección de shot (portada desde MediaTools) para
+  colorear prefijos y alternar bloques entre dos colores (`#B56AB5` / `#6AB5CA`).
 
 ## Detección (estrategia en capas)
 

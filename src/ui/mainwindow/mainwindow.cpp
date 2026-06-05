@@ -1,4 +1,6 @@
 #include "seqchecker/mainwindow.h"
+#include "seqchecker/ArrowComboBox.h"
+#include "seqchecker/ShotNameDetector.h"
 #include "mediatools/debug_flags.h"
 #include "mediatools/AppPathManager.h"
 #include "mediatools/PythonRunner.h"
@@ -7,6 +9,8 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QCheckBox>
+#include <QComboBox>
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QTableWidgetItem>
@@ -37,6 +41,10 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QFont>
+#include <QThread>
+#include <QVector>
+#include <QSet>
+#include <QtMath>
 
 namespace {
 // Columnas de la tabla de resultados.
@@ -50,6 +58,14 @@ enum Col {
     ColCorrupt,
     ColStatus,
     ColCount
+};
+
+constexpr int ColRoleShotName = Qt::UserRole + 10;
+constexpr int ColRoleShotColor = Qt::UserRole + 11;
+
+struct CpuPreset {
+    QString name;
+    int workers = 1;
 };
 
 QColor statusColor(const QString &status)
@@ -67,6 +83,71 @@ QString statusLabelText(const QString &status)
     if (status == "corrupt") return "CORRUPT";
     if (status == "error")   return "Error";
     return "Analyzing…";
+}
+
+QVector<CpuPreset> buildCpuPresets()
+{
+    const int idealThreads = qMax(1, QThread::idealThreadCount());
+    const int highWorkers = qMax(1, idealThreads - 1);
+    const int mediumWorkers = qMax(1, qRound(static_cast<double>(highWorkers) * 0.66));
+    const int lowWorkers = qMax(1, qRound(static_cast<double>(highWorkers) * 0.33));
+
+    const QVector<CpuPreset> raw = {
+        {"High", highWorkers},
+        {"Medium", mediumWorkers},
+        {"Low", lowWorkers},
+        {"Minimal", 1},
+    };
+
+    QSet<int> usedWorkers;
+    QVector<CpuPreset> presets;
+    presets.reserve(raw.size());
+    for (const CpuPreset &preset : raw) {
+        if (usedWorkers.contains(preset.workers)) {
+            continue;
+        }
+        usedWorkers.insert(preset.workers);
+        presets.push_back(preset);
+    }
+
+    if (presets.isEmpty()) {
+        presets.push_back({"High", 1});
+    }
+    return presets;
+}
+
+QLabel *makeRichLabel(const QString &html)
+{
+    QLabel *label = new QLabel(html);
+    label->setTextFormat(Qt::RichText);
+    label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    label->setStyleSheet("background: transparent; padding: 0px 2px;");
+    return label;
+}
+
+QString sequenceDisplayHtml(const QString &sequenceName, const QString &shotName, const QString &shotColor)
+{
+    const int dot = sequenceName.lastIndexOf('.');
+    const QString base = (dot > 0) ? sequenceName.left(dot) : sequenceName;
+    const QString ext = (dot > 0) ? sequenceName.mid(dot) : QString();
+    const QString extSpan = ext.isEmpty()
+        ? QString()
+        : QString("<span style='color:#8d8d8d;'>%1</span>").arg(ext.toHtmlEscaped());
+
+    const bool hasShotPrefix =
+        !shotName.trimmed().isEmpty()
+        && shotName.compare(QString::fromLatin1(ShotNameDetector::UNKNOWN_SHOT), Qt::CaseInsensitive) != 0
+        && base.startsWith(shotName);
+
+    if (hasShotPrefix) {
+        const QString prefix = shotName.toHtmlEscaped();
+        const QString suffix = base.mid(shotName.size()).toHtmlEscaped();
+        return QString("<span style='color:%1;'>%2</span><span style='color:#cccccc;'>%3</span>%4")
+            .arg(shotColor, prefix, suffix, extSpan);
+    }
+
+    return QString("<span style='color:#cccccc;'>%1</span>%2")
+        .arg(base.toHtmlEscaped(), extSpan);
 }
 } // namespace
 
@@ -136,16 +217,24 @@ void MainWindow::buildUi()
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_table->setShowGrid(false);
     m_table->setAlternatingRowColors(false);
+    m_table->setWordWrap(false);
+    m_table->setTextElideMode(Qt::ElideNone);
+    m_table->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_table->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
     QHeaderView *hh = m_table->horizontalHeader();
-    hh->setSectionResizeMode(ColSequence, QHeaderView::Stretch);
-    hh->setSectionResizeMode(ColFolder, QHeaderView::Stretch);
-    hh->setSectionResizeMode(ColFrames, QHeaderView::Fixed);
-    hh->setSectionResizeMode(ColRange, QHeaderView::Fixed);
-    hh->setSectionResizeMode(ColOk, QHeaderView::Fixed);
-    hh->setSectionResizeMode(ColSuspect, QHeaderView::Fixed);
-    hh->setSectionResizeMode(ColCorrupt, QHeaderView::Fixed);
-    hh->setSectionResizeMode(ColStatus, QHeaderView::Fixed);
+    hh->setSectionResizeMode(ColSequence, QHeaderView::Interactive);
+    hh->setSectionResizeMode(ColFolder, QHeaderView::Interactive);
+    hh->setSectionResizeMode(ColFrames, QHeaderView::Interactive);
+    hh->setSectionResizeMode(ColRange, QHeaderView::Interactive);
+    hh->setSectionResizeMode(ColOk, QHeaderView::Interactive);
+    hh->setSectionResizeMode(ColSuspect, QHeaderView::Interactive);
+    hh->setSectionResizeMode(ColCorrupt, QHeaderView::Interactive);
+    hh->setSectionResizeMode(ColStatus, QHeaderView::Interactive);
+    hh->setStretchLastSection(false);
+    hh->setMinimumSectionSize(56);
+    m_table->setColumnWidth(ColSequence, 380);
+    m_table->setColumnWidth(ColFolder, 520);
     m_table->setColumnWidth(ColFrames, 70);
     m_table->setColumnWidth(ColRange, 140);
     m_table->setColumnWidth(ColOk, 60);
@@ -176,6 +265,41 @@ void MainWindow::buildUi()
     });
 
     root->addWidget(m_table, 1);
+
+    QWidget *footer = new QWidget(central);
+    footer->setObjectName("seqCheckerFooter");
+    footer->setStyleSheet("QWidget#seqCheckerFooter { background: transparent; border: none; }");
+    auto *footerLayout = new QHBoxLayout(footer);
+    footerLayout->setContentsMargins(0, 0, 0, 0);
+    footerLayout->setSpacing(8);
+
+    m_keepOnTopChk = new QCheckBox("Keep this window on top", footer);
+    m_keepOnTopChk->setObjectName("uiOptionCheckbox");
+    connect(m_keepOnTopChk, &QCheckBox::stateChanged, this, [this](int state) {
+        setKeepOnTopState(state == Qt::Checked);
+        saveWindowSettings();
+    });
+    footerLayout->addWidget(m_keepOnTopChk);
+    footerLayout->addStretch(1);
+
+    QLabel *cpuLabel = new QLabel("CPU", footer);
+    cpuLabel->setStyleSheet("color:#8f8f8f; font-size:11px; padding-left:6px;");
+    footerLayout->addWidget(cpuLabel);
+
+    m_cpuCombo = new ArrowComboBox(footer);
+    m_cpuCombo->setObjectName("queueCpuCombo");
+    m_cpuCombo->setMinimumWidth(160);
+    connect(m_cpuCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
+        if (!m_cpuCombo || index < 0) return;
+        const QString presetName = m_cpuCombo->itemData(index, Qt::UserRole).toString();
+        if (presetName.isEmpty()) return;
+        m_cpuPresetName = presetName;
+        saveWindowSettings();
+    });
+    footerLayout->addWidget(m_cpuCombo);
+
+    populateCpuPresetCombo();
+    root->addWidget(footer);
     setCentralWidget(central);
 }
 
@@ -354,14 +478,16 @@ void MainWindow::startAnalysis(const QStringList &folders)
 
     resetResults();
     m_analysisRunning = true;
-    setStatusText("Scanning…");
+    const int workers = selectedWorkerCount();
+    setStatusText(QString("Scanning… (%1 workers)").arg(workers));
 
     QStringList args;
     args << "--json-lines";
+    args << "--workers" << QString::number(workers);
     for (const QString &f : folders) {
         args << "--folder" << f;
     }
-    CONDITIONAL_DEBUG("import", "[startAnalysis] folders:" << folders);
+    CONDITIONAL_DEBUG("import", "[startAnalysis] folders:" << folders << "workers:" << workers);
     m_runner->run(m_scriptPath, args);
 }
 
@@ -370,6 +496,8 @@ void MainWindow::resetResults()
     m_table->setRowCount(0);
     m_seqRowById.clear();
     m_allCorruptFiles.clear();
+    m_lastShotForColor.clear();
+    m_shotColorBlock = -1;
     m_totalFrames = 0;
     m_doneFrames = 0;
     m_corruptTotal = 0;
@@ -408,10 +536,34 @@ void MainWindow::onPythonLine(const QString &line)
         const QString id = o.value("id").toString();
         const int row = rowForSeqId(id, true);
         const QString folder = o.value("folder").toString();
-        m_table->item(row, ColSequence)->setText(o.value("name").toString());
+        const QString sequenceName = o.value("name").toString();
+        QTableWidgetItem *seqItem = m_table->item(row, ColSequence);
+        seqItem->setText(sequenceName);
+
+        ShotNameDetector::ItemInput shotInput;
+        shotInput.displayName = sequenceName;
+        shotInput.baseName = QFileInfo(sequenceName).completeBaseName();
+        shotInput.absolutePath = QDir(folder).filePath(sequenceName);
+        shotInput.isSequence = true;
+        const ShotNameDetector::Detection shotDet = ShotNameDetector::detectSingle(shotInput, "SeqCheckerTable");
+
+        QString shotName = shotDet.shotName.trimmed();
+        if (shotName.isEmpty()) {
+            shotName = QString::fromLatin1(ShotNameDetector::UNKNOWN_SHOT);
+        }
+        if (shotName != m_lastShotForColor) {
+            m_lastShotForColor = shotName;
+            ++m_shotColorBlock;
+        }
+        const QString shotColor = ShotNameDetector::shotColorForBlock(m_shotColorBlock);
+        seqItem->setData(ColRoleShotName, shotName);
+        seqItem->setData(ColRoleShotColor, shotColor);
+        m_table->setCellWidget(row, ColSequence, makeRichLabel(sequenceDisplayHtml(sequenceName, shotName, shotColor)));
+
         QTableWidgetItem *fit = m_table->item(row, ColFolder);
         fit->setText(folder);
         fit->setData(Qt::UserRole, folder);
+        fit->setToolTip(folder);
         m_table->item(row, ColFrames)->setText(QString::number(o.value("frames").toInt()));
         m_table->item(row, ColRange)->setText(o.value("range").toString());
         QTableWidgetItem *sit = m_table->item(row, ColStatus);
@@ -442,13 +594,16 @@ void MainWindow::onPythonLine(const QString &line)
         }
         QTableWidgetItem *cit = m_table->item(row, ColCorrupt);
         cit->setForeground(statusColor(corrupt > 0 ? "corrupt" : "ok"));
+        QFont corruptFont = cit->font();
+        corruptFont.setUnderline(corrupt > 0);
+        cit->setFont(corruptFont);
         if (corrupt > 0) {
             cit->setData(Qt::UserRole, corruptFiles);
-            QFont f = cit->font();
-            f.setUnderline(true);
-            cit->setFont(f);
             cit->setToolTip("Click to list & copy corrupt frame paths");
             m_allCorruptFiles += corruptFiles;
+        } else {
+            cit->setData(Qt::UserRole, QStringList());
+            cit->setToolTip(QString());
         }
 
         // Tooltip con el detalle de frames problemáticos en el resto de las celdas.
@@ -456,7 +611,14 @@ void MainWindow::onPythonLine(const QString &line)
         if (!detail.isEmpty()) {
             for (int c = 0; c < ColCount; ++c) {
                 if (c == ColCorrupt && corrupt > 0) continue;
-                m_table->item(row, c)->setToolTip(detail);
+                if (c == ColFolder) continue; // Mantener el tooltip del path completo.
+                QTableWidgetItem *cellItem = m_table->item(row, c);
+                if (cellItem) {
+                    cellItem->setToolTip(detail);
+                }
+                if (QWidget *cellWidget = m_table->cellWidget(row, c)) {
+                    cellWidget->setToolTip(detail);
+                }
             }
         }
         m_corruptTotal += corrupt;
@@ -543,6 +705,70 @@ void MainWindow::showCorruptDialog(const QString &title, const QStringList &file
     dlg.exec();
 }
 
+void MainWindow::populateCpuPresetCombo()
+{
+    if (!m_cpuCombo) return;
+
+    m_cpuCombo->blockSignals(true);
+    m_cpuCombo->clear();
+    const QVector<CpuPreset> presets = buildCpuPresets();
+    for (const CpuPreset &preset : presets) {
+        const QString label = QString("%1 (%2 workers)")
+                                  .arg(preset.name)
+                                  .arg(preset.workers);
+        m_cpuCombo->addItem(label, preset.name);
+        m_cpuCombo->setItemData(m_cpuCombo->count() - 1, preset.workers, Qt::UserRole + 1);
+    }
+    applyCpuPresetSelection(m_cpuPresetName);
+    m_cpuCombo->blockSignals(false);
+}
+
+void MainWindow::applyCpuPresetSelection(const QString &presetName)
+{
+    if (!m_cpuCombo) return;
+
+    for (int i = 0; i < m_cpuCombo->count(); ++i) {
+        if (m_cpuCombo->itemData(i, Qt::UserRole).toString().compare(presetName, Qt::CaseInsensitive) == 0) {
+            m_cpuCombo->setCurrentIndex(i);
+            m_cpuPresetName = m_cpuCombo->itemData(i, Qt::UserRole).toString();
+            return;
+        }
+    }
+    if (m_cpuCombo->count() > 0) {
+        m_cpuCombo->setCurrentIndex(0);
+        m_cpuPresetName = m_cpuCombo->itemData(0, Qt::UserRole).toString();
+    }
+}
+
+int MainWindow::selectedWorkerCount() const
+{
+    if (!m_cpuCombo || m_cpuCombo->count() == 0) {
+        return qMax(1, QThread::idealThreadCount() - 1);
+    }
+    int index = m_cpuCombo->currentIndex();
+    if (index < 0) index = 0;
+    const int workers = m_cpuCombo->itemData(index, Qt::UserRole + 1).toInt();
+    return qMax(1, workers);
+}
+
+void MainWindow::setKeepOnTopState(bool enabled)
+{
+    m_keepOnTop = enabled;
+    if (m_keepOnTopChk) {
+        m_keepOnTopChk->blockSignals(true);
+        m_keepOnTopChk->setChecked(enabled);
+        m_keepOnTopChk->blockSignals(false);
+    }
+
+    const QRect currentGeometry = geometry();
+    const bool wasVisible = isVisible();
+    setWindowFlag(Qt::WindowStaysOnTopHint, enabled);
+    if (wasVisible) {
+        show();
+        setGeometry(currentGeometry);
+    }
+}
+
 // ----------------------------------------------------------------------------
 // Geometría de ventana
 // ----------------------------------------------------------------------------
@@ -551,34 +777,50 @@ void MainWindow::scheduleGeometrySave()
     if (m_geometrySaveTimer) m_geometrySaveTimer->start();
 }
 
-void MainWindow::loadWindowSettings()
+QString MainWindow::settingsFilePath() const
 {
     const QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    if (!configDir.isEmpty()) QDir().mkpath(configDir);
-    const QString configPath = configDir.isEmpty() ? QString() : configDir + "/window_geometry.ini";
+    if (configDir.isEmpty()) return QString();
+    QDir().mkpath(configDir);
+    return configDir + "/window_geometry.ini";
+}
 
+void MainWindow::loadWindowSettings()
+{
+    const QString configPath = settingsFilePath();
     QByteArray geo;
     if (!configPath.isEmpty() && QFile::exists(configPath)) {
         QSettings s(configPath, QSettings::IniFormat);
         geo = s.value("geometry").toByteArray();
+        m_cpuPresetName = s.value("seqchecker/cpu_preset", "High").toString();
+        m_keepOnTop = s.value("seqchecker/keep_on_top", false).toBool();
     } else {
         QSettings s;
         geo = s.value("geometry").toByteArray();
+        m_cpuPresetName = s.value("seqchecker/cpu_preset", "High").toString();
+        m_keepOnTop = s.value("seqchecker/keep_on_top", false).toBool();
     }
     if (!geo.isEmpty()) restoreGeometry(geo);
+    applyCpuPresetSelection(m_cpuPresetName);
+    setKeepOnTopState(m_keepOnTop);
 }
 
 void MainWindow::saveWindowSettings()
 {
-    const QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    const QString configPath = configDir.isEmpty() ? QString() : configDir + "/window_geometry.ini";
-    if (!configPath.isEmpty()) {
-        QDir().mkpath(configDir);
-        QSettings s(configPath, QSettings::IniFormat);
+    const QString configPath = settingsFilePath();
+
+    auto saveSettings = [this](QSettings &s) {
         s.setValue("geometry", saveGeometry());
+        s.setValue("seqchecker/cpu_preset", m_cpuPresetName);
+        s.setValue("seqchecker/keep_on_top", m_keepOnTop);
+    };
+
+    if (!configPath.isEmpty()) {
+        QSettings s(configPath, QSettings::IniFormat);
+        saveSettings(s);
     } else {
         QSettings s;
-        s.setValue("geometry", saveGeometry());
+        saveSettings(s);
     }
 }
 

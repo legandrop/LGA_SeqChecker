@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(SeqChecker VERSION 0.101 LANGUAGES CXX)
+project(SeqChecker VERSION 0.102 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,13 +46,17 @@ set(SOURCES
     src/ui/mainwindow/mainwindow.cpp
     src/core/AppPathManager.cpp
     src/core/debug/debug_flags.cpp
+    src/utils/ArrowComboBox.cpp
     src/utils/PythonRunner.cpp
+    src/utils/ShotNameDetector.cpp
     src/utils/LogRotation.cpp
 )
 
 # Headers
 set(HEADERS
     include/seqchecker/mainwindow.h
+    include/seqchecker/ArrowComboBox.h
+    include/seqchecker/ShotNameDetector.h
     include/mediatools/AppPathManager.h
     include/mediatools/debug_flags.h
     include/mediatools/PythonRunner.h

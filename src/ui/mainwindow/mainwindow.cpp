@@ -1,6 +1,8 @@
 #include "seqchecker/mainwindow.h"
 #include "seqchecker/ArrowComboBox.h"
 #include "seqchecker/ShotNameDetector.h"
+#include "seqchecker/utils/TableColumnWidthHelper.h"
+#include "seqchecker/utils/TableHeaderDividerView.h"
 #include "mediatools/debug_flags.h"
 #include "mediatools/AppPathManager.h"
 #include "mediatools/PythonRunner.h"
@@ -26,6 +28,7 @@
 #include <QDropEvent>
 #include <QCloseEvent>
 #include <QResizeEvent>
+#include <QShowEvent>
 #include <QMoveEvent>
 #include <QStandardPaths>
 #include <QSettings>
@@ -41,10 +44,16 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QFont>
+#include <QTextStream>
 #include <QThread>
 #include <QVector>
 #include <QSet>
 #include <QtMath>
+#include <algorithm>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 
 namespace {
 // Columnas de la tabla de resultados.
@@ -66,6 +75,65 @@ constexpr int ColRoleShotColor = Qt::UserRole + 11;
 struct CpuPreset {
     QString name;
     int workers = 1;
+};
+
+static const struct {
+    const char* var;
+    const char* value;
+} COLOR_VARS[] = {
+    { "bg_principal", "#161616" },
+    { "bg_items", "#1d1d1d" },
+    { "bg_tabs", "#101010" },
+    { "border_principal", "#303030" },
+    { "txt_principal", "#B2B2B2" },
+    { "control_section_label_color", "#8f8f8f" },
+    { "txt_input", "#7b7b7b" },
+    { "txt_input_placeholder", "#555555" },
+    { "violeta_oscuro", "#443a91" },
+    { "violeta_claro", "#774dcb" },
+    { "boton_gris_oscuro", "#2a2a2a" },
+    { "boton_gris_oscu_hover", "#3a3a3a" },
+    { "table_header_bg", "#191919" },
+    { "table_group_bg", "#212121" },
+    { "checkbox_bg_on", "#393455" },
+    { "checkbox_bg_off", "#2a2832" },
+    { "checkbox_bg_on_hover", "#4c4770" },
+    { "checkbox_bg_off_hover", "#3a3744" },
+    { "ui_small_action_button_text_color", "#9a9a9a" },
+    { "ui_small_action_button_text_color_hover", "#d0d0d0" },
+    { "ui_small_action_button_font_size", "12px" },
+    { "ui_small_action_button_padding_y", "3px" },
+    { "ui_small_action_button_padding_x", "10px" },
+    { "ui_small_action_button_bg_color", "#2a2a2a" },
+    { "ui_small_action_button_bg_color_hover", "#3a3a3a" },
+    { "ui_small_action_button_bg_color_disabled", "#232323" },
+    { "ui_small_action_button_text_color_disabled", "#666666" },
+    { "ui_small_action_button_border_color", "#313131" },
+    { "ui_small_action_button_border_radius", "4px" },
+    { "ui_table_selection_button_text_color", "#8a8a8a" },
+    { "ui_table_selection_button_text_color_hover", "#d0d0d0" },
+    { "ui_table_selection_button_font_size", "13px" },
+    { "ui_table_selection_button_padding_y", "4px" },
+    { "ui_table_selection_button_padding_x", "12px" },
+    { "ui_table_selection_button_bg_color", "#1d1d1d" },
+    { "ui_table_selection_button_bg_color_hover", "#2a2a2a" },
+    { "ui_table_selection_button_bg_color_pressed", "#343434" },
+    { "ui_table_selection_button_border_radius", "4px" },
+    { "ui_clear_all_tables_button_border_radius", "4px" },
+    { "ui_clear_all_tables_button_border_width", "1px" },
+    { "ui_clear_all_tables_button_bg_color", "#232323" },
+    { "ui_clear_all_tables_button_border_color", "#333333" },
+    { "ui_clear_all_tables_button_text_color", "#9a9a9a" },
+    { "ui_clear_all_tables_button_bg_color_hover", "#2d2d2d" },
+    { "ui_clear_all_tables_button_text_color_hover", "#d0d0d0" },
+    { "ui_clear_all_tables_button_bg_color_pressed", "#343434" },
+    { "ui_clear_all_tables_button_text_color_pressed", "#d0d0d0" },
+    { "ui_clear_all_tables_button_bg_color_disabled", "#1f1f1f" },
+    { "ui_clear_all_tables_button_border_color_disabled", "#2b2b2b" },
+    { "ui_clear_all_tables_button_text_color_disabled", "#666666" },
+    { "ui_tab_header_padding_x", "22px" },
+    { "ui_field_padding_y", "1px" },
+    { "ui_field_padding_x", "6px" },
 };
 
 QColor statusColor(const QString &status)
@@ -149,6 +217,22 @@ QString sequenceDisplayHtml(const QString &sequenceName, const QString &shotName
     return QString("<span style='color:#cccccc;'>%1</span>%2")
         .arg(base.toHtmlEscaped(), extSpan);
 }
+
+TableColumnWidthHelper::Config makeSeqColumnConfig(const QString &context)
+{
+    TableColumnWidthHelper::Config config;
+    config.fixedColumns = {ColFrames, ColRange, ColOk, ColSuspect, ColCorrupt, ColStatus};
+    config.flexibleColumns = {ColSequence, ColFolder};
+    config.priorityColumn = ColFolder;
+    config.minimumWidths = {{ColSequence, 180}, {ColFolder, 240}};
+    config.defaultWidths = {{ColSequence, 380}, {ColFolder, 520}};
+    config.defaultRatios = {{ColSequence, 1.0}, {ColFolder, 1.4}};
+    config.contentPaddingPx = 10;
+    config.headerPaddingPx = 10;
+    config.debugCategory = "queue_table_widths";
+    config.debugContext = context;
+    return config;
+}
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
@@ -207,14 +291,22 @@ void MainWindow::buildUi()
 
     m_table = new QTableWidget(0, ColCount, central);
     m_table->setObjectName("seqTable");
+    m_table->setHorizontalHeader(new TableHeaderDividerView(Qt::Horizontal, m_table, 12));
+    m_table->horizontalHeader()->setStyleSheet(TableHeaderDividerView::dividerStyleSheet());
     QStringList headers;
     headers << "Sequence" << "Folder" << "Frames" << "Range"
             << "OK" << "Suspect" << "Corrupt" << "Status";
     m_table->setHorizontalHeaderLabels(headers);
+    for (int i = 0; i < m_table->columnCount(); ++i) {
+        if (QTableWidgetItem *hdrItem = m_table->horizontalHeaderItem(i)) {
+            hdrItem->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+    }
     m_table->verticalHeader()->setVisible(false);
     m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_table->setSelectionMode(QAbstractItemView::SingleSelection);
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_table->setFocusPolicy(Qt::NoFocus);
     m_table->setShowGrid(false);
     m_table->setAlternatingRowColors(false);
     m_table->setWordWrap(false);
@@ -222,15 +314,16 @@ void MainWindow::buildUi()
     m_table->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     m_table->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
-    QHeaderView *hh = m_table->horizontalHeader();
+    auto *hh = static_cast<TableHeaderDividerView *>(m_table->horizontalHeader());
+    hh->setNoRightBorderColumns(QSet<int>{ColFrames, ColRange, ColOk, ColSuspect, ColCorrupt, ColStatus});
     hh->setSectionResizeMode(ColSequence, QHeaderView::Interactive);
     hh->setSectionResizeMode(ColFolder, QHeaderView::Interactive);
-    hh->setSectionResizeMode(ColFrames, QHeaderView::Interactive);
-    hh->setSectionResizeMode(ColRange, QHeaderView::Interactive);
-    hh->setSectionResizeMode(ColOk, QHeaderView::Interactive);
-    hh->setSectionResizeMode(ColSuspect, QHeaderView::Interactive);
-    hh->setSectionResizeMode(ColCorrupt, QHeaderView::Interactive);
-    hh->setSectionResizeMode(ColStatus, QHeaderView::Interactive);
+    hh->setSectionResizeMode(ColFrames, QHeaderView::Fixed);
+    hh->setSectionResizeMode(ColRange, QHeaderView::Fixed);
+    hh->setSectionResizeMode(ColOk, QHeaderView::Fixed);
+    hh->setSectionResizeMode(ColSuspect, QHeaderView::Fixed);
+    hh->setSectionResizeMode(ColCorrupt, QHeaderView::Fixed);
+    hh->setSectionResizeMode(ColStatus, QHeaderView::Fixed);
     hh->setStretchLastSection(false);
     hh->setMinimumSectionSize(56);
     m_table->setColumnWidth(ColSequence, 380);
@@ -241,6 +334,7 @@ void MainWindow::buildUi()
     m_table->setColumnWidth(ColSuspect, 70);
     m_table->setColumnWidth(ColCorrupt, 75);
     m_table->setColumnWidth(ColStatus, 110);
+    connect(hh, &QHeaderView::sectionResized, this, &MainWindow::onHeaderSectionResized);
 
     // Click en la celda Corrupt (con >0) abre el listado copiable de esa secuencia.
     connect(m_table, &QTableWidget::cellClicked, this, [this](int row, int col) {
@@ -249,7 +343,9 @@ void MainWindow::buildUi()
         if (!it) return;
         const QStringList files = it->data(Qt::UserRole).toStringList();
         if (files.isEmpty()) return;
-        const QString name = m_table->item(row, ColSequence) ? m_table->item(row, ColSequence)->text() : QString();
+        const QString name = m_table->item(row, ColSequence)
+            ? m_table->item(row, ColSequence)->data(Qt::UserRole).toString()
+            : QString();
         showCorruptDialog("Corrupt frames — " + name, files);
     });
 
@@ -301,45 +397,65 @@ void MainWindow::buildUi()
     populateCpuPresetCombo();
     root->addWidget(footer);
     setCentralWidget(central);
+
+    m_pendingSmartColumnSizing = true;
+    QTimer::singleShot(0, this, [this]() {
+        syncTableColumnsToViewport();
+    });
 }
 
 void MainWindow::loadStyleSheet()
 {
-    QString qss;
-    for (const QString &res : {QStringLiteral(":/styles/tabs.qss"),
-                               QStringLiteral(":/styles/dark_theme.qss")}) {
-        QFile f(res);
-        if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            qss += QString::fromUtf8(f.readAll()) + "\n";
-            f.close();
+    QString stylesheet;
+
+    for (const QString &res : {QStringLiteral(":/styles/dark_theme.qss"),
+                               QStringLiteral(":/styles/tabs.qss")}) {
+        QFile file(res);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            continue;
         }
+        stylesheet += QString::fromUtf8(file.readAll()) + "\n";
+        file.close();
     }
 
-    // Estilos propios de SeqChecker (no dependen de tabs de PipeSync).
-    qss += QString(
+    QVector<QPair<QString, QString>> replacements;
+    replacements.reserve(static_cast<int>(sizeof(COLOR_VARS) / sizeof(COLOR_VARS[0])));
+    for (const auto &cv : COLOR_VARS) {
+        const QString var = QString::fromUtf8(cv.var);
+        const QString value = QString::fromUtf8(cv.value);
+        replacements.append({var, value});
+        if (qApp) {
+            qApp->setProperty(cv.var, value);
+        }
+    }
+    std::sort(replacements.begin(), replacements.end(),
+              [](const QPair<QString, QString> &a, const QPair<QString, QString> &b) {
+                  return a.first.size() > b.first.size();
+              });
+    for (const auto &replacement : replacements) {
+        stylesheet.replace(replacement.first, replacement.second);
+    }
+
+    stylesheet += QString(
         "QWidget#centralRoot { background-color: %1; }"
         "QLabel#statusLabel { color: %2; font-family: 'Inter'; font-size: 14px; padding: 2px 2px; }"
         "QTableWidget#seqTable {"
-        "  background-color: %3; border: none; border-radius: 6px;"
+        "  background-color: %3; border: none; border-radius: 8px;"
         "  color: %2; font-family: 'Inter'; font-size: 13px;"
         "  gridline-color: transparent;"
         "}"
         "QTableWidget#seqTable::item { padding: 4px 8px; border: none; }"
         "QTableWidget#seqTable::item:selected { background-color: %4; color: #d0d0d0; }"
-        "QHeaderView::section {"
-        "  background-color: #191919; color: #8f8f8f; border: none;"
-        "  border-right: 1px solid %5; padding: 6px 8px; font-weight: 600;"
-        "}"
-        "QScrollBar:vertical { background: %3; width: 12px; margin: 0; }"
-        "QScrollBar::handle:vertical { background: #3a3a3a; border-radius: 6px; min-height: 24px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-    ).arg(COL_BG_PRINCIPAL)   // 1
-     .arg(COL_TXT_PRINCIPAL)  // 2
-     .arg(COL_BG_ITEMS)       // 3
-     .arg("#4b4b4b")          // 4
-     .arg(COL_BORDER);        // 5
+        "QTableWidget#seqTable QLabel { background: transparent; }"
+        "QTableWidget#seqTable QScrollBar:vertical { background: %3; width: 12px; margin: 0; }"
+        "QTableWidget#seqTable QScrollBar::handle:vertical { background: #3a3a3a; border-radius: 6px; min-height: 24px; }"
+        "QTableWidget#seqTable QScrollBar::add-line:vertical, QTableWidget#seqTable QScrollBar::sub-line:vertical { height: 0; }"
+    ).arg(COL_BG_PRINCIPAL)
+     .arg(COL_TXT_PRINCIPAL)
+     .arg(COL_BG_ITEMS)
+     .arg("#4b4b4b");
 
-    setStyleSheet(qss);
+    setStyleSheet(stylesheet);
 }
 
 // ----------------------------------------------------------------------------
@@ -479,6 +595,7 @@ void MainWindow::startAnalysis(const QStringList &folders)
     resetResults();
     m_analysisRunning = true;
     const int workers = selectedWorkerCount();
+    m_progressTimer.start();
     setStatusText(QString("Scanning… (%1 workers)").arg(workers));
 
     QStringList args;
@@ -496,11 +613,19 @@ void MainWindow::resetResults()
     m_table->setRowCount(0);
     m_seqRowById.clear();
     m_allCorruptFiles.clear();
+    m_queueOrder.clear();
+    m_completedSeqIds.clear();
     m_lastShotForColor.clear();
     m_shotColorBlock = -1;
+    m_activeQueueIndex = -1;
+    m_lastFpsDoneFrames = 0;
+    m_lastFpsElapsedMs = 0;
+    m_smoothedFps = 0.0;
     m_totalFrames = 0;
     m_doneFrames = 0;
     m_corruptTotal = 0;
+    m_pendingSmartColumnSizing = true;
+    m_manualColumnWidthOverride = false;
 }
 
 int MainWindow::rowForSeqId(const QString &id, bool createIfMissing)
@@ -514,6 +639,11 @@ int MainWindow::rowForSeqId(const QString &id, bool createIfMissing)
         m_table->setItem(row, c, new QTableWidgetItem());
     }
     m_seqRowById.insert(id, row);
+    m_pendingSmartColumnSizing = true;
+    m_manualColumnWidthOverride = false;
+    QTimer::singleShot(0, this, [this]() {
+        syncTableColumnsToViewport();
+    });
     return row;
 }
 
@@ -538,7 +668,8 @@ void MainWindow::onPythonLine(const QString &line)
         const QString folder = o.value("folder").toString();
         const QString sequenceName = o.value("name").toString();
         QTableWidgetItem *seqItem = m_table->item(row, ColSequence);
-        seqItem->setText(sequenceName);
+        seqItem->setText(QString());
+        seqItem->setData(Qt::UserRole, sequenceName);
 
         ShotNameDetector::ItemInput shotInput;
         shotInput.displayName = sequenceName;
@@ -566,15 +697,37 @@ void MainWindow::onPythonLine(const QString &line)
         fit->setToolTip(folder);
         m_table->item(row, ColFrames)->setText(QString::number(o.value("frames").toInt()));
         m_table->item(row, ColRange)->setText(o.value("range").toString());
-        QTableWidgetItem *sit = m_table->item(row, ColStatus);
-        sit->setText(statusLabelText("pending"));
-        sit->setForeground(statusColor("pending"));
+        if (!m_queueOrder.contains(id)) {
+            m_queueOrder.append(id);
+        }
+        refreshQueueStatuses();
         m_totalFrames += o.value("frames").toInt();
+    } else if (tag == "MT_SEQ_START") {
+        const QString id = o.value("id").toString();
+        if (!m_queueOrder.contains(id)) {
+            m_queueOrder.append(id);
+        }
+        m_activeQueueIndex = m_queueOrder.indexOf(id);
+        refreshQueueStatuses();
     } else if (tag == "MT_PROGRESS") {
         m_doneFrames = o.value("done").toInt();
         if (o.contains("total")) m_totalFrames = o.value("total").toInt();
-        setStatusText(QString("Analyzing… %1 / %2 frames — %3 corrupt")
-                          .arg(m_doneFrames).arg(m_totalFrames).arg(m_corruptTotal));
+
+        const qint64 elapsedMs = m_progressTimer.isValid() ? m_progressTimer.elapsed() : 0;
+        const int deltaFrames = m_doneFrames - m_lastFpsDoneFrames;
+        const qint64 deltaMs = elapsedMs - m_lastFpsElapsedMs;
+        if (deltaFrames > 0 && deltaMs > 0) {
+            const double instantFps = (1000.0 * static_cast<double>(deltaFrames)) / static_cast<double>(deltaMs);
+            m_smoothedFps = (m_smoothedFps <= 0.0) ? instantFps : (m_smoothedFps * 0.7 + instantFps * 0.3);
+        }
+        m_lastFpsDoneFrames = m_doneFrames;
+        m_lastFpsElapsedMs = elapsedMs;
+
+        setStatusText(QString("Analyzing… %1 / %2 frames — %3 corrupt — %4 fps")
+                          .arg(m_doneFrames)
+                          .arg(m_totalFrames)
+                          .arg(m_corruptTotal)
+                          .arg(QString::number(std::max(0.0, m_smoothedFps), 'f', 1)));
     } else if (tag == "MT_SEQ_RESULT") {
         const QString id = o.value("id").toString();
         const int row = rowForSeqId(id, true);
@@ -586,6 +739,11 @@ void MainWindow::onPythonLine(const QString &line)
         QTableWidgetItem *sit = m_table->item(row, ColStatus);
         sit->setText(statusLabelText(status));
         sit->setForeground(statusColor(status));
+        m_completedSeqIds.insert(id);
+        if (m_activeQueueIndex >= 0 && m_activeQueueIndex < m_queueOrder.size()
+            && m_queueOrder.at(m_activeQueueIndex) == id) {
+            m_activeQueueIndex = -1;
+        }
 
         // Paths corruptos: se guardan en la celda Corrupt (click simple abre el listado).
         QStringList corruptFiles;
@@ -622,7 +780,9 @@ void MainWindow::onPythonLine(const QString &line)
             }
         }
         m_corruptTotal += corrupt;
+        refreshQueueStatuses();
     } else if (tag == "MT_DONE") {
+        m_activeQueueIndex = -1;
         setStatusDone(o.value("sequences").toInt(),
                       o.value("corrupt").toInt(),
                       o.value("suspect").toInt());
@@ -705,6 +865,46 @@ void MainWindow::showCorruptDialog(const QString &title, const QStringList &file
     dlg.exec();
 }
 
+void MainWindow::refreshQueueStatuses()
+{
+    if (!m_table) return;
+
+    int queuedAfterActive = 0;
+    int queuedNoActive = 0;
+    for (int i = 0; i < m_queueOrder.size(); ++i) {
+        const QString &seqId = m_queueOrder.at(i);
+        if (m_completedSeqIds.contains(seqId)) {
+            continue;
+        }
+
+        const int row = rowForSeqId(seqId, false);
+        if (row < 0) {
+            continue;
+        }
+        QTableWidgetItem *statusItem = m_table->item(row, ColStatus);
+        if (!statusItem) {
+            continue;
+        }
+
+        if (m_activeQueueIndex >= 0 && i == m_activeQueueIndex) {
+            statusItem->setText(statusLabelText("pending"));
+            statusItem->setForeground(statusColor("pending"));
+            continue;
+        }
+
+        int queuedPos = 0;
+        if (m_activeQueueIndex >= 0) {
+            ++queuedAfterActive;
+            queuedPos = queuedAfterActive;
+        } else {
+            ++queuedNoActive;
+            queuedPos = queuedNoActive;
+        }
+        statusItem->setText(QString("Queued #%1").arg(queuedPos));
+        statusItem->setForeground(QColor("#5a9ab5"));
+    }
+}
+
 void MainWindow::populateCpuPresetCombo()
 {
     if (!m_cpuCombo) return;
@@ -760,6 +960,24 @@ void MainWindow::setKeepOnTopState(bool enabled)
         m_keepOnTopChk->blockSignals(false);
     }
 
+#ifdef Q_OS_WIN
+    if (isVisible()) {
+        const HWND hwnd = reinterpret_cast<HWND>(winId());
+        if (hwnd) {
+            ::SetWindowPos(
+                hwnd,
+                enabled ? HWND_TOPMOST : HWND_NOTOPMOST,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER
+            );
+        }
+    } else {
+        setWindowFlag(Qt::WindowStaysOnTopHint, enabled);
+    }
+#else
     const QRect currentGeometry = geometry();
     const bool wasVisible = isVisible();
     setWindowFlag(Qt::WindowStaysOnTopHint, enabled);
@@ -767,6 +985,77 @@ void MainWindow::setKeepOnTopState(bool enabled)
         show();
         setGeometry(currentGeometry);
     }
+#endif
+}
+
+bool MainWindow::isDynamicColumn(int logicalIndex) const
+{
+    return logicalIndex == ColSequence || logicalIndex == ColFolder;
+}
+
+void MainWindow::applySmartFlexibleColumns()
+{
+    if (!m_table || !m_table->viewport() || m_adjustingColumns) {
+        return;
+    }
+    const auto config = makeSeqColumnConfig("applySmartFlexibleColumns");
+    m_adjustingColumns = true;
+    const bool applied = TableColumnWidthHelper::applyContentAwareWidths(m_table, config);
+    m_adjustingColumns = false;
+    m_pendingSmartColumnSizing = !applied;
+}
+
+void MainWindow::updateProportionalColumns()
+{
+    if (!m_table || !m_table->viewport() || m_adjustingColumns) {
+        return;
+    }
+    const auto config = makeSeqColumnConfig("updateProportionalColumns");
+    m_adjustingColumns = true;
+    TableColumnWidthHelper::applyProportionalWidths(m_table, config);
+    m_adjustingColumns = false;
+}
+
+void MainWindow::syncTableColumnsToViewport()
+{
+    if (m_pendingSmartColumnSizing) {
+        if (!isVisible()) {
+            return;
+        }
+        applySmartFlexibleColumns();
+        if (m_pendingSmartColumnSizing) {
+            updateProportionalColumns();
+        }
+        return;
+    }
+    updateProportionalColumns();
+}
+
+void MainWindow::recheckSmartColumnsAfterWindowResize()
+{
+    if (!m_table || !m_table->viewport() || m_seqRowById.isEmpty() || m_manualColumnWidthOverride) {
+        return;
+    }
+    const auto config = makeSeqColumnConfig("recheckSmartColumnsAfterWindowResize");
+    m_adjustingColumns = true;
+    const bool applied = TableColumnWidthHelper::applyContentAwareWidthsIfAllFit(m_table, config);
+    m_adjustingColumns = false;
+    if (applied) {
+        m_pendingSmartColumnSizing = false;
+    }
+}
+
+void MainWindow::onHeaderSectionResized(int logicalIndex, int oldSize, int newSize)
+{
+    Q_UNUSED(oldSize);
+    if (m_adjustingColumns || !isDynamicColumn(logicalIndex)) {
+        return;
+    }
+    m_manualColumnWidthOverride = true;
+    const auto config = makeSeqColumnConfig("onHeaderSectionResized");
+    m_adjustingColumns = true;
+    TableColumnWidthHelper::applyManualResizeRebalance(m_table, config, logicalIndex, newSize);
+    m_adjustingColumns = false;
 }
 
 // ----------------------------------------------------------------------------
@@ -828,7 +1117,19 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
     if (m_dropOverlay && m_dropOverlay->isVisible()) m_dropOverlay->setGeometry(rect());
+    syncTableColumnsToViewport();
+    QTimer::singleShot(0, this, [this]() {
+        recheckSmartColumnsAfterWindowResize();
+    });
     scheduleGeometrySave();
+}
+
+void MainWindow::showEvent(QShowEvent *event)
+{
+    QMainWindow::showEvent(event);
+    QTimer::singleShot(0, this, [this]() {
+        syncTableColumnsToViewport();
+    });
 }
 
 void MainWindow::moveEvent(QMoveEvent *event)

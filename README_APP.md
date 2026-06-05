@@ -18,11 +18,14 @@ recursivamente todas las secuencias `.exr` que se encuentren.
 ## Tabla de resultados (UI)
 
 - Headers en modo `Interactive`: las columnas ahora se pueden resizear
-  manualmente desde el header (incluyendo `Sequence` y `Folder`).
-- `Folder` conserva el path completo como tooltip y la tabla permite scroll
-  horizontal para evitar truncados permanentes.
+  manualmente desde el header (incluyendo `Sequence` y `Folder`) con
+  rebalanceo inteligente para ocupar siempre el ancho visible de la ventana.
+- `Folder` conserva el path completo como tooltip y ajusta su ancho junto con
+  `Sequence` según contenido visible.
 - La columna `Sequence` usa detección de shot (portada desde MediaTools) para
   colorear prefijos y alternar bloques entre dos colores (`#B56AB5` / `#6AB5CA`).
+- `Status` sigue lógica de cola (`Queued #N` / `Analyzing…` / resultado final)
+  para mostrar cuál secuencia está activa y cuáles esperan turno.
 
 ## Detección (estrategia en capas)
 
@@ -49,6 +52,7 @@ El backend emite por stdout una línea JSON por evento (prefijo `MT_`), que
 | Línea | Payload |
 |---|---|
 | `MT_SEQ_FOUND`  | `{id,name,folder,frames,range}` |
+| `MT_SEQ_START`  | `{id,position,remaining}` |
 | `MT_PROGRESS`   | `{done,total}` |
 | `MT_SEQ_RESULT` | `{id,ok,suspect,corrupt,status,detail}` |
 | `MT_DONE`       | `{sequences,ok,suspect,corrupt}` |

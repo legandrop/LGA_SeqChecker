@@ -14,6 +14,7 @@ analiza cada frame en tres capas (de barato a caro):
 
 Protocolo de salida (stdout, una línea JSON por evento, prefijo MT_):
   MT_SEQ_FOUND  {id,name,folder,frames,range}
+  MT_SEQ_START  {id,position,remaining}
   MT_PROGRESS   {done,total}
   MT_SEQ_RESULT {id,ok,suspect,corrupt,status,detail}
   MT_DONE       {sequences,ok,suspect,corrupt}
@@ -227,7 +228,12 @@ def analyze(folders, workers):
     totals = {"ok": 0, "suspect": 0, "corrupt": 0}
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        for seq in seqs:
+        for seq_index, seq in enumerate(seqs):
+            emit("MT_SEQ_START", {
+                "id": seq.id,
+                "position": seq_index + 1,
+                "remaining": max(0, len(seqs) - (seq_index + 1)),
+            })
             paths = [p for _n, p in sorted(
                 ((n if n is not None else -1, p) for n, p in seq.frames.items()))]
 

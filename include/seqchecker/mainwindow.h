@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include <QHash>
+#include <QSet>
+#include <QElapsedTimer>
 #include <QString>
 #include <QStringList>
 
@@ -39,6 +41,7 @@ inline constexpr const char* DROP_OVERLAY_LABEL_ACTIVE_COLOR = "#8f8f8f";
 class QCloseEvent;
 class QMoveEvent;
 class QResizeEvent;
+class QShowEvent;
 class QDragEnterEvent;
 class QDragMoveEvent;
 class QDragLeaveEvent;
@@ -86,6 +89,13 @@ private:
     void applyCpuPresetSelection(const QString &presetName);
     int selectedWorkerCount() const;
     void setKeepOnTopState(bool enabled);
+    void refreshQueueStatuses();
+    void syncTableColumnsToViewport();
+    void applySmartFlexibleColumns();
+    void updateProportionalColumns();
+    void recheckSmartColumnsAfterWindowResize();
+    bool isDynamicColumn(int logicalIndex) const;
+    void onHeaderSectionResized(int logicalIndex, int oldSize, int newSize);
 
     QString     m_pythonExe;
     QString     m_scriptPath;
@@ -103,13 +113,23 @@ private:
 
     QHash<QString, int> m_seqRowById; // seq id -> fila de la tabla
     QStringList m_allCorruptFiles;    // agregado global de paths corruptos
+    QStringList m_queueOrder;
+    QSet<QString> m_completedSeqIds;
     QString m_lastShotForColor;
     QString m_cpuPresetName = "High";
     bool m_keepOnTop = false;
     int m_shotColorBlock = -1;
+    int m_activeQueueIndex = -1;
+    int m_lastFpsDoneFrames = 0;
+    qint64 m_lastFpsElapsedMs = 0;
+    double m_smoothedFps = 0.0;
     int m_totalFrames = 0;
     int m_doneFrames = 0;
     int m_corruptTotal = 0;
+    bool m_adjustingColumns = false;
+    bool m_pendingSmartColumnSizing = false;
+    bool m_manualColumnWidthOverride = false;
+    QElapsedTimer m_progressTimer;
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
@@ -118,6 +138,7 @@ protected:
     void dropEvent(QDropEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
     void moveEvent(QMoveEvent *event) override;
 };
 

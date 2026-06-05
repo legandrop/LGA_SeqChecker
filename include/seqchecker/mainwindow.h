@@ -88,6 +88,9 @@ private:
     void populateCpuPresetCombo();
     void applyCpuPresetSelection(const QString &presetName);
     int selectedWorkerCount() const;
+    int maxWorkerCount() const;
+    QString cpuControlFilePath() const;
+    void writeCpuControlFile(int workers) const;
     void setKeepOnTopState(bool enabled);
     void refreshQueueStatuses();
     void syncTableColumnsToViewport();
@@ -110,6 +113,7 @@ private:
     QCheckBox    *m_keepOnTopChk = nullptr;
     QComboBox    *m_cpuCombo = nullptr;
     QTimer       *m_geometrySaveTimer = nullptr;
+    QString      m_cpuControlFile;   // archivo de control leido en vivo por el backend Python
 
     QHash<QString, int> m_seqRowById; // seq id -> fila de la tabla
     QStringList m_allCorruptFiles;    // agregado global de paths corruptos

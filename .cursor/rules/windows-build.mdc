@@ -65,4 +65,5 @@ alwaysApply: true
 - The detector lives in `py_scr/LGA_SeqChecker.py`. It must keep emitting one JSON line per event on stdout with the `MT_` protocol consumed by `MainWindow::onPythonLine()`:
   - `MT_SEQ_FOUND`, `MT_PROGRESS`, `MT_SEQ_RESULT`, `MT_DONE`.
 - Binaries are resolved relative to the script (`thirdparty/win/OpenEXR/exrcheck.exe`, `exrheader.exe`); do not hardcode absolute paths.
+- CPU load is dynamic: C++ passes `--workers`, `--max-workers` and `--control-file`. The pool is sized to the max; real concurrency is gated by a `DynamicGate` whose limit a watcher thread re-reads from the control-file (`cpu_control.txt`) every ~0.2s. C++ rewrites that file when the CPU dropdown changes mid-run. Keep this live-reload contract intact when editing the backend.
 - `compilar_dev.bat` copies `py_scr` into `build/py_scr` on every build; in dev mode `python_runtime`, `thirdparty` and `config` are resolved from the project root, so they are not copied into `build`.

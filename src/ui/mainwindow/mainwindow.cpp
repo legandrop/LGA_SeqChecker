@@ -245,6 +245,7 @@ MainWindow::MainWindow(QWidget *parent)
     const QString appPath = QCoreApplication::applicationDirPath();
     m_pythonExe  = AppPathManager::getPythonRuntimePath(appPath);
     m_scriptPath = AppPathManager::getPythonScriptPath(appPath, "LGA_SeqChecker.py");
+    m_cpuControlFile = cpuControlFilePath();
     CONDITIONAL_DEBUG("core", "[MainWindow] python:" << m_pythonExe << "script:" << m_scriptPath);
 
     m_runner = new PythonRunner(this);
@@ -391,6 +392,14 @@ void MainWindow::buildUi()
         if (presetName.isEmpty()) return;
         m_cpuPresetName = presetName;
         saveWindowSettings();
+        // Si hay un analisis en curso, aplicar el nuevo limite de workers en vivo:
+        // el backend Python relee el control-file y ajusta la concurrencia a medida
+        // que terminan los frames actualmente en proceso.
+        if (m_analysisRunning) {
+            const int workers = selectedWorkerCount();
+            writeCpuControlFile(workers);
+            CONDITIONAL_DEBUG("import", "[cpu] cambio en vivo -> workers:" << workers);
+        }
     });
     footerLayout->addWidget(m_cpuCombo);
 
@@ -595,12 +604,17 @@ void MainWindow::startAnalysis(const QStringList &folders)
     resetResults();
     m_analysisRunning = true;
     const int workers = selectedWorkerCount();
+    const int maxWorkers = maxWorkerCount();
+    // Baseline del control-file: el backend lo relee en vivo cuando se cambia el dropdown.
+    writeCpuControlFile(workers);
     m_progressTimer.start();
     setStatusText(QString("Scanning… (%1 workers)").arg(workers));
 
     QStringList args;
     args << "--json-lines";
     args << "--workers" << QString::number(workers);
+    args << "--max-workers" << QString::number(maxWorkers);
+    args << "--control-file" << m_cpuControlFile;
     for (const QString &f : folders) {
         args << "--folder" << f;
     }
@@ -949,6 +963,37 @@ int MainWindow::selectedWorkerCount() const
     if (index < 0) index = 0;
     const int workers = m_cpuCombo->itemData(index, Qt::UserRole + 1).toInt();
     return qMax(1, workers);
+}
+
+int MainWindow::maxWorkerCount() const
+{
+    // Mayor cantidad de workers entre todos los presets: define el tope del pool
+    // Python para que el control-file pueda escalar hacia arriba en vivo.
+    int maxW = 1;
+    if (m_cpuCombo) {
+        for (int i = 0; i < m_cpuCombo->count(); ++i) {
+            maxW = qMax(maxW, m_cpuCombo->itemData(i, Qt::UserRole + 1).toInt());
+        }
+    }
+    return qMax(maxW, selectedWorkerCount());
+}
+
+QString MainWindow::cpuControlFilePath() const
+{
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (dir.isEmpty()) dir = QDir::tempPath();
+    QDir().mkpath(dir);
+    return QDir(dir).filePath("cpu_control.txt");
+}
+
+void MainWindow::writeCpuControlFile(int workers) const
+{
+    if (m_cpuControlFile.isEmpty()) return;
+    QFile f(m_cpuControlFile);
+    if (f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        f.write(QByteArray::number(qMax(1, workers)));
+        f.close();
+    }
 }
 
 void MainWindow::setKeepOnTopState(bool enabled)

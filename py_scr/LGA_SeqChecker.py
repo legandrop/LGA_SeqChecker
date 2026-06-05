@@ -53,6 +53,76 @@ def emit(tag, obj):
 
 
 # ---------------------------------------------------------------------------
+# Control dinamico de concurrencia (limite de workers ajustable en vivo)
+# ---------------------------------------------------------------------------
+class DynamicGate:
+    """Compuerta de concurrencia con limite ajustable en caliente.
+
+    El pool de threads se crea con un tope alto fijo, pero la cantidad de
+    frames procesados simultaneamente la controla este gate. Al bajar el
+    limite, los frames ya en proceso terminan y recien ahi se frena el resto;
+    al subirlo, arrancan mas de inmediato. Asi el cambio de CPU se aplica
+    apenas terminan los frames actualmente en vuelo, no al final del job.
+    """
+
+    def __init__(self, limit):
+        self._cond = threading.Condition()
+        self._limit = max(1, int(limit))
+        self._active = 0
+
+    def set_limit(self, value):
+        with self._cond:
+            value = max(1, int(value))
+            if value != self._limit:
+                self._limit = value
+                self._cond.notify_all()
+
+    def __enter__(self):
+        with self._cond:
+            while self._active >= self._limit:
+                self._cond.wait()
+            self._active += 1
+        return self
+
+    def __exit__(self, *_exc):
+        with self._cond:
+            self._active -= 1
+            self._cond.notify_all()
+
+
+def _read_control_workers(path):
+    """Lee el entero de workers del control-file. None si no se pudo."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            txt = f.read().strip()
+        if txt:
+            return int(txt)
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def start_control_watcher(path, gate, max_workers, stop_event):
+    """Thread que relee el control-file y ajusta el gate en vivo."""
+    if not path:
+        return None
+
+    def _loop():
+        last = None
+        while not stop_event.wait(0.2):
+            n = _read_control_workers(path)
+            if n is None or n == last:
+                continue
+            last = n
+            n = max(1, min(int(n), max_workers))
+            gate.set_limit(n)
+
+    t = threading.Thread(target=_loop, name="cpu_control_watcher", daemon=True)
+    t.start()
+    return t
+
+
+# ---------------------------------------------------------------------------
 # Resolución de binarios
 # ---------------------------------------------------------------------------
 def _find_tool(name):
@@ -188,8 +258,14 @@ def header_signature(path):
 # ---------------------------------------------------------------------------
 # Orquestación
 # ---------------------------------------------------------------------------
-def analyze(folders, workers):
+def analyze(folders, workers, max_workers=None, control_file=None):
     seqs = scan_folders(folders)
+
+    # Tope del pool: lo mas alto que el usuario podria pedir en vivo.
+    pool_cap = max(int(workers), int(max_workers or workers), 1)
+    gate = DynamicGate(workers)
+    stop_event = threading.Event()
+    watcher = start_control_watcher(control_file, gate, pool_cap, stop_event)
 
     total_frames = 0
     for seq in seqs:
@@ -203,6 +279,7 @@ def analyze(folders, workers):
         })
 
     if total_frames == 0:
+        stop_event.set()
         emit("MT_DONE", {"sequences": 0, "ok": 0, "suspect": 0, "corrupt": 0})
         return
 
@@ -219,15 +296,17 @@ def analyze(folders, workers):
                 emit("MT_PROGRESS", {"done": done["n"], "total": total_frames})
 
     # Resultado por frame: (path) -> dict(ok_decode, sig)
+    # El gate limita cuantos frames se procesan a la vez (ajustable en vivo).
     def check_one(path):
-        ok, detail = exrcheck_frame(path)
-        sig = header_signature(path) if ok else None
+        with gate:
+            ok, detail = exrcheck_frame(path)
+            sig = header_signature(path) if ok else None
         tick()
         return path, ok, detail, sig
 
     totals = {"ok": 0, "suspect": 0, "corrupt": 0}
 
-    with ThreadPoolExecutor(max_workers=workers) as pool:
+    with ThreadPoolExecutor(max_workers=pool_cap) as pool:
         for seq_index, seq in enumerate(seqs):
             emit("MT_SEQ_START", {
                 "id": seq.id,
@@ -314,6 +393,8 @@ def analyze(folders, workers):
                 "suspect_files": suspect_files,
             })
 
+    stop_event.set()
+
     emit("MT_DONE", {
         "sequences": len(seqs),
         "ok": totals["ok"],
@@ -326,6 +407,10 @@ def main():
     parser = argparse.ArgumentParser(description="LGA SeqChecker - EXR corruption detector")
     parser.add_argument("--folder", action="append", default=[], help="carpeta a analizar (repetible)")
     parser.add_argument("--workers", type=int, default=max(2, (os.cpu_count() or 4) - 1))
+    parser.add_argument("--max-workers", type=int, default=0,
+                        help="tope del pool para escalado en vivo (0 = igual a --workers)")
+    parser.add_argument("--control-file", default=None,
+                        help="archivo con el limite de workers, releido en vivo")
     parser.add_argument("--json-lines", action="store_true", help="(default) salida MT_ por línea")
     args = parser.parse_args()
 
@@ -342,7 +427,9 @@ def main():
     if not EXRCHECK:
         sys.stderr.write("WARNING: exrcheck.exe not found; capa 2 (decode) deshabilitada\n")
 
-    analyze(folders, args.workers)
+    analyze(folders, args.workers,
+            max_workers=(args.max_workers or args.workers),
+            control_file=args.control_file)
     return 0
 
 

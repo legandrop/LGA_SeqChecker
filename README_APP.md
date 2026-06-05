@@ -11,9 +11,24 @@ recursivamente todas las secuencias `.exr` que se encuentren.
 3. Al soltar arranca el análisis automático. Los resultados aparecen por
    secuencia en la tabla, con conteo de frames OK / Suspect / Corrupt y estado.
 4. En el footer se puede ajustar `CPU` (presets High/Medium/Low/Minimal) para
-   definir la cantidad de workers Python a usar en el próximo análisis.
+   definir la cantidad de workers Python. El cambio se aplica **en vivo**: si se
+   mueve durante un análisis en curso, el nuevo límite toma efecto a medida que
+   terminan los frames que ya estaban en proceso (no al final del job).
 5. Doble-click en una fila abre la carpeta de la secuencia. El tooltip de la
    fila lista los frames con problema.
+
+## Control de CPU dinámico
+
+- C++ escribe el límite de workers en un control-file (`cpu_control.txt` en
+  `AppDataLocation`) y se lo pasa al backend con `--control-file`. Al mover el
+  dropdown durante un análisis, C++ reescribe ese archivo.
+- El backend crea el pool con un tope (`--max-workers`) y limita la concurrencia
+  real con un `DynamicGate` cuyo cupo es releído por un thread watcher cada
+  ~0.2s. Bajar el límite frena nuevos frames a medida que terminan los activos;
+  subirlo arranca más de inmediato.
+- Nota: el paralelismo sigue siendo por-secuencia (las secuencias se procesan en
+  serie para preservar la lógica de cola `Queued/Analyzing`), así que el límite
+  efectivo dentro de una secuencia está acotado por su cantidad de frames.
 
 ## Tabla de resultados (UI)
 

@@ -10,3 +10,5 @@ __pycache__/
 # Binarios pesados / runtime embebido (no versionar)
 /python_runtime/
 /thirdparty/
+.codex/
+.cursor/

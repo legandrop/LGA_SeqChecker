@@ -6,8 +6,8 @@
 transcode_steps_stats=true   // siempre mantenerlo en true! escribe otro archivo. no cambiarlo!
 
 
-error=false
-warning=false
+error=true
+warning=true
 core=false
 AppPathManager=false
 import=false

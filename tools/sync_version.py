@@ -38,7 +38,12 @@ def _write_text(path: Path, content: str, original_content: str | None = None) -
     newline = "\n"
     if original_content is not None and "\r\n" in original_content:
         newline = "\r\n"
-    path.write_text(content, encoding="utf-8", newline=newline)
+    # `Path.write_text(newline=...)` recien existe en Python 3.10; con 3.9 (el python3
+    # del sistema en macOS) tira "write_text() got an unexpected keyword argument
+    # 'newline'" y el sync falla entero. `open()` acepta `newline` en todas las
+    # versiones, asi que se escribe por ahi.
+    with path.open("w", encoding="utf-8", newline=newline) as fh:
+        fh.write(content)
 
 
 def _extract_changelog_version(content: str) -> str:

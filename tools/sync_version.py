@@ -1,8 +1,26 @@
 #!/usr/bin/env python3
-"""Sincroniza la version de la app tomando max(CMake, ChangeLog)."""
+"""Sincroniza la version de la app tomando max(CMake, ChangeLog).
+
+Uso
+---
+    python tools/sync_version.py            # propaga
+    python tools/sync_version.py --check    # NO escribe; sale 1 si algo difiere
+
+El `--check` existe porque el wrapper acepta cualquier flag y se lo pasa tal
+cual: antes el script lo ignoraba y sincronizaba igual, asi que
+`sync_version.bat --check` --que parece una verificacion de solo lectura--
+**bumpeaba la version y reescribia el CMakeLists**. Ya paso en LinkRedirector:
+una auditoria lo corrio esperando algo de solo lectura y le escribio archivos.
+Mismo flag y mismo contrato que LinkRedirector y LGA_RepoTools. OJO: en
+FileManagerS3 y PipeSync el flag se llama `--check-only` y tiene otro contrato
+(tienen un codigo 2 que sale solo con --allow-changelog-ahead-local-test); ahi `--check`
+funciona nada mas que por la abreviacion automatica de argparse. No asumir que
+el mismo comando significa lo mismo en los cinco repos.
+"""
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -89,12 +107,40 @@ def _replace_cmake_project_version(content: str, new_version: str) -> str:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Sincroniza la version tomando max(CMakeLists, ChangeLog)."
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="No escribe nada; sale 1 si alguna superficie difiere de la resuelta.",
+    )
+    args = parser.parse_args()
+
     changelog_content = _read_text(CHANGELOG_MD)
     cmake_content = _read_text(CMAKE_FILE)
 
     cmake_version = _extract_cmake_project_version(cmake_content)
     changelog_version = _extract_changelog_version(changelog_content)
     resolved_version = _max_version(cmake_version, changelog_version)
+
+    if args.check:
+        version_file = _read_text(VERSION_FILE).strip() if VERSION_FILE.exists() else None
+        desincronizados = []
+        if cmake_version != resolved_version:
+            desincronizados.append(f"CMakeLists.txt ({cmake_version})")
+        if changelog_version != resolved_version:
+            desincronizados.append(f"docs/ChangeLog.md ({changelog_version})")
+        if version_file != resolved_version:
+            desincronizados.append(f"VERSION ({version_file or 'falta'})")
+
+        if desincronizados:
+            print(f"[sync_version] ERROR: desincronizado contra {resolved_version}.")
+            for item in desincronizados:
+                print(f"    {item}")
+            return 1
+        print(f"[sync_version] OK: todo en {resolved_version}.")
+        return 0
 
     new_changelog = _replace_changelog_version(changelog_content, resolved_version)
     new_cmake = _replace_cmake_project_version(cmake_content, resolved_version)
@@ -103,9 +149,9 @@ def main() -> int:
     _write_text(CMAKE_FILE, new_cmake, cmake_content)
     _write_text(VERSION_FILE, f"{resolved_version}\n", _read_text(VERSION_FILE))
 
-    print(f"[sync_version] CMake version:    {cmake_version}")
-    print(f"[sync_version] ChangeLog version:{changelog_version}")
-    print(f"[sync_version] Resolved version: {resolved_version}")
+    print(f"[sync_version] CMake version:     {cmake_version}")
+    print(f"[sync_version] ChangeLog version: {changelog_version}")
+    print(f"[sync_version] Resolved version:  {resolved_version}")
     print("[sync_version] Files synced: ChangeLog.md, VERSION, CMakeLists.txt")
     return 0
 

@@ -94,7 +94,7 @@ El backend emite por stdout una línea JSON por evento (prefijo `MT_`), que
 ## Build (desarrollo)
 
 ```bat
-compilar_dev.bat
+compilar.bat
 ```
 
 Requiere Qt 6.5.3 mingw_64, Ninja y LLVM (lld), igual que MediaTools_v2.

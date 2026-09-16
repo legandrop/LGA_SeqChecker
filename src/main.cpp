@@ -72,7 +72,6 @@ int main(int argc, char *argv[])
         ":/fonts/Roboto-Regular.ttf",
         ":/fonts/Roboto-Medium.ttf",
         ":/fonts/Roboto-Bold.ttf",
-        ":/fonts/georgia.ttf",
     };
     for (const QString& fontFile : fontFiles) {
         QFontDatabase::addApplicationFont(fontFile);

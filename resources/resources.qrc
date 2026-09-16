@@ -15,6 +15,5 @@
         <file>fonts/Inter_18pt-Medium.ttf</file>
         <file>fonts/Inter_18pt-SemiBold.ttf</file>
         <file>fonts/Inter_18pt-Light.ttf</file>
-        <file>fonts/georgia.ttf</file>
     </qresource>
 </RCC>

@@ -13,14 +13,14 @@ set PARALLEL_CORES=%NUMBER_OF_PROCESSORS%
 
 :parse_args
 if "%1"=="" goto after_args
-if "%1"=="--force-clean" ( set FORCE_CLEAN=true & shift & goto parse_args )
-if "%1"=="--no-deploy"   ( set NO_DEPLOY=true  & shift & goto parse_args )
-if "%1"=="--no-run"      ( set NO_RUN=true     & shift & goto parse_args )
-if "%1"=="--wait"        ( set WAIT_FOR_APP=true & shift & goto parse_args )
-if "%1"=="--release"     ( set BUILD_TYPE=Release & shift & goto parse_args )
-if "%1"=="--parallel"    ( set PARALLEL_CORES=%2 & shift & shift & goto parse_args )
-if "%1"=="--help" ( set SHOW_HELP=true & shift & goto parse_args )
-if "%1"=="-h"     ( set SHOW_HELP=true & shift & goto parse_args )
+if "%1"=="--force-clean" ( set "FORCE_CLEAN=true" & shift & goto parse_args )
+if "%1"=="--no-deploy"   ( set "NO_DEPLOY=true" & shift & goto parse_args )
+if "%1"=="--no-run"      ( set "NO_RUN=true" & shift & goto parse_args )
+if "%1"=="--wait"        ( set "WAIT_FOR_APP=true" & shift & goto parse_args )
+if "%1"=="--release"     ( set "BUILD_TYPE=Release" & shift & goto parse_args )
+if "%1"=="--parallel"    ( set "PARALLEL_CORES=%2" & shift & shift & goto parse_args )
+if "%1"=="--help" ( set "SHOW_HELP=true" & shift & goto parse_args )
+if "%1"=="-h"     ( set "SHOW_HELP=true" & shift & goto parse_args )
 shift
 goto parse_args
 

@@ -201,6 +201,15 @@ echo.
 echo [Files]
 echo Source: "deploy\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 echo.
+rem Inno solo desinstala los archivos que copio el: lo que la app escribe despues en
+rem {app} queda huerfano y la carpeta no se borra. logs\ la crea la app en cada arranque;
+rem py_scr y python_runtime las instala el setup pero quedan con __pycache__ encima.
+rem Nada de eso es trabajo del usuario, y la config chica vive en AppData.
+echo [UninstallDelete]
+echo Type: filesandordirs; Name: "{app}\logs"
+echo Type: filesandordirs; Name: "{app}\py_scr"
+echo Type: filesandordirs; Name: "{app}\python_runtime"
+echo.
 echo [Icons]
 echo Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 echo Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon

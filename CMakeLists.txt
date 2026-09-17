@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(SeqChecker VERSION 0.112 LANGUAGES CXX)
+project(SeqChecker VERSION 0.113 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

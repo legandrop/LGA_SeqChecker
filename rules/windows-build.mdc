@@ -24,6 +24,15 @@ alwaysApply: true
 
 - If compilation fails, try to fix the issue without cleaning the build directory first.
 
+## Cierre de procesos al compilar e instalar (instancia unica)
+
+- SeqChecker es de instancia unica (regla LGA, 2026-09-18).
+- `compilar.bat` sin `--no-run` (compila y lanza) cierra TODAS las instancias de `SeqChecker.exe` —la instalada, la de `build\` y las de otros checkouts— y el `python.exe` que cada una lanza para escanear, elegido por la carpeta de su instancia y nunca el de otra app con el mismo nombre de proceso: `tools\close_by_path.ps1 -ExeName SeqChecker.exe -AllInstances -Helpers python.exe -HelperPrefix "%APP_ROOT%." -Tree`. El `.` final es obligatorio: `APP_ROOT` termina en `\` y sin el punto le escapa la comilla de cierre a PowerShell.
+- `compilar.bat --no-run` cierra SOLO la copia que va a pisar (`-ExactPath build\SeqChecker.exe`).
+- El instalador (el `[Code]` que genera `instalador.bat`, bloque de la seccion 5.1 de `../LGA_Base_QT_C_Py/docs/Doc_Instaladores_Inno.md`) cierra TODAS las instancias con su `python.exe` al INSTALAR (`PrepareToInstall`, con `{app}` como `-HelperPrefix`); al DESINSTALAR (`InitializeUninstall`), solo lo que corre desde `{app}`.
+- Toda corrida automatizada o delegada compila SIEMPRE con `compilar.bat --no-run`. La entrega final al usuario se abre con `explorer.exe "<ruta al exe>"`, nunca desde la terminal de la corrida: quedaria en el contenedor MSIX de la app de escritorio (ver `../LGA_Base_QT_C_Py/docs/Doc_Autostart_Windows.md`).
+- `tools\close_by_path.ps1` es copia identica de la canonica de `../LGA_Base_QT_C_Py/tools/`: no se edita aca; los arreglos se hacen en la Base y se vuelven a copiar.
+
 - After a relevant (non-trivial) change, always bump the app version by `+0.001` using `docs/ChangeLog.md` as the human source of truth:
   - Add a new top changelog entry with the new version number.
   - The changelog must always be written in castellano (Spanish).

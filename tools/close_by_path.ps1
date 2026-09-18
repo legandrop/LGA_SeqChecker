@@ -1,9 +1,9 @@
-# close_by_path.ps1 -- copia de LGA_Base_QT_C_Py/tools/close_by_path.ps1, rev 2
+# close_by_path.ps1 -- rev 2 (2026-09-17)
 #
-# Pieza CANONICA: esta es la copia fuente de verdad. Cada app que la use lleva una copia en su
-# propio tools\ con esta primera linea reemplazada por:
-#   # close_by_path.ps1 -- copia de LGA_Base_QT_C_Py/tools/close_by_path.ps1, rev <N>
-# y no la modifica: los arreglos se hacen aca y se vuelven a copiar.
+# La copia CANONICA vive en LGA_Base_QT_C_Py\tools\close_by_path.ps1. Cada app lleva en su propio
+# tools\ una copia IDENTICA, esta cabecera incluida (solo pueden cambiar los fines de linea), y no
+# la modifica: los arreglos se hacen en la canonica y se vuelven a copiar. Asi esta cabecera es
+# cierta en cualquier repo, y comparar una copia con la canonica es un diff sin excepciones.
 #
 # Cierra los procesos de UN ejecutable (-ExeName) cuya ruta REAL (Win32_Process.ExecutablePath)
 # cae adentro de una carpeta (-Prefix) o es exactamente un archivo (-ExactPath). Nunca cierra por

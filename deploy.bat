@@ -1,6 +1,9 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+REM La carpeta del script se toma ANTES de parsear: `shift` corre tambien el parametro cero, y
+REM despues del parseo "~dp0" ya no da la carpeta del script sino la actual.
+set "APP_ROOT=%~dp0"
 
 set "NO_RUN=false"
 set "BUILD_DIR=build_deploy"
@@ -13,12 +16,16 @@ shift
 goto parse_args
 
 :after_args
+REM Cerrar SOLO las copias que corren desde deploy\ y build_deploy\ de ESTE repo, y ANTES de
+REM borrar deploy\ (con el exe corriendo, el rmdir lo dejaba a medias). Antes era
+REM "taskkill /F /IM", que cerraba tambien la app instalada. Ver tools\close_by_path.ps1.
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%APP_ROOT%tools\close_by_path.ps1" -ExeName SeqChecker.exe -ExactPath "%APP_ROOT%deploy\SeqChecker.exe,%APP_ROOT%%BUILD_DIR%\SeqChecker.exe"
+if %ERRORLEVEL% equ 2 ( echo Error: close_by_path rechazo los parametros & exit /b 1 )
+
 echo Limpiando carpeta de deploy anterior...
 if exist deploy rmdir /S /Q deploy
 
 echo Implementando LGA SeqChecker...
-
-taskkill /F /IM SeqChecker.exe 2>nul
 
 set PATH=%PATH%;C:\Qt\6.5.3\mingw_64\bin;C:\Qt\Tools\mingw1310_64\bin;C:\Qt\Tools\Ninja;C:\Program Files\LLVM\bin
 

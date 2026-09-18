@@ -10,6 +10,9 @@ set BUILD_TYPE=Debug
 set SHOW_HELP=false
 set WAIT_FOR_APP=false
 set PARALLEL_CORES=%NUMBER_OF_PROCESSORS%
+REM La carpeta del script se toma ANTES de parsear: `shift` (sin /1) corre tambien el parametro
+REM cero, asi que despues del parseo "~dp0" ya no da la carpeta del script sino la actual.
+set "APP_ROOT=%~dp0"
 
 :parse_args
 if "%1"=="" goto after_args
@@ -50,11 +53,13 @@ echo   %0 --force-clean --parallel 8
 exit /b 0
 
 :main
-cd /d "%~dp0"
+cd /d "%APP_ROOT%"
 
-REM Matar el proceso SeqChecker si esta en ejecucion, para que el linker no
-REM choque con el exe bloqueado.
-taskkill /F /IM SeqChecker.exe >nul 2>&1
+REM Cerrar SOLO la copia que corre desde build\ de ESTE repo, para que el linker no choque con el
+REM exe bloqueado. Antes era "taskkill /F /IM", que cerraba tambien la app instalada con la que se
+REM estaba trabajando. Ver tools\close_by_path.ps1. Sale con 2 solo si rechazo los parametros.
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%APP_ROOT%tools\close_by_path.ps1" -ExeName SeqChecker.exe -ExactPath "%APP_ROOT%build\SeqChecker.exe"
+if %ERRORLEVEL% equ 2 ( echo Error: close_by_path rechazo los parametros & exit /b 1 )
 ping -n 2 127.0.0.1 >nul
 
 echo Compilacion rapida para desarrollo Windows con Ninja (usando %PARALLEL_CORES% nucleos)

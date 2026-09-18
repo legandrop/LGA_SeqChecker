@@ -93,8 +93,11 @@ if /i "!GITHUB_READY!" NEQ "true" set "GITHUB_LOCAL_ONLY_CONFIRMED=true"
 echo.
 echo Creando instalador de LGA SeqChecker...
 
-REM Cerrar proceso activo para evitar bloqueos durante deploy/installer
-taskkill /F /IM SeqChecker.exe 2>nul
+REM Cerrar SOLO las copias que corren desde deploy\ y build_deploy\ de ESTE repo, para evitar
+REM bloqueos durante deploy/installer. Antes era "taskkill /F /IM", que cerraba tambien la app
+REM instalada. Ver tools\close_by_path.ps1. Sale con 2 solo si rechazo los parametros.
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%~dp0tools\close_by_path.ps1" -ExeName SeqChecker.exe -ExactPath "%~dp0deploy\SeqChecker.exe,%~dp0build_deploy\SeqChecker.exe"
+if %ERRORLEVEL% equ 2 ( echo Error: close_by_path rechazo los parametros & exit /b 1 )
 
 REM Ejecutar deploy automaticamente (sin abrir la app al finalizar)
 echo Ejecutando deploy.bat --no-run...

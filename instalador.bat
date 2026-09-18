@@ -224,11 +224,11 @@ echo.
 echo [Run]
 echo Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 echo.
-rem Antes de instalar y antes de desinstalar se cierra la app POR RUTA, nunca por nombre:
-rem close_by_path.ps1 -ExeName {#MyAppExeName} -Prefix {app} cierra solo las copias que corren
-rem desde la carpeta que se va a pisar o a borrar; un build o un checkout quedan vivos.
-rem Despues, el python.exe del runtime de {app} con -Tree: la app lo lanza para escanear y, si
-rem quedo huerfano, retiene archivos de {app}. El -Prefix deja afuera al python de otras apps.
+rem Antes de instalar, SeqChecker es de instancia unica: close_by_path.ps1 -AllInstances cierra
+rem TODAS las copias de la app (la instalada, un build, otro checkout) y el python.exe que cada
+rem una lanza para escanear, buscado por la carpeta de su instancia y en {app} (-HelperPrefix),
+rem donde un python huerfano retiene archivos: nunca el python de otra app. Antes de
+rem desinstalar se cierra solo lo que corre desde {app} (-Prefix), la carpeta que se va a borrar.
 rem Es el bloque de la Base, Doc_Instaladores_Inno.md seccion 5.1: powershell.exe por su ruta
 rem de {sys}, -NonInteractive y las comillas como #34. Si PowerShell no corre o {app} no pasa
 rem las guardas del script, no se cierra nada e Inno avisa archivo en uso.
@@ -247,13 +247,13 @@ echo end;
 echo.
 echo function PrepareToInstall^(var NeedsRestart: Boolean^): String;
 echo var
-echo   ScriptPath: String;
+echo   ScriptPath, AppDir: String;
 echo begin
 echo   Result := '';
 echo   ExtractTemporaryFile^('close_by_path.ps1'^);
 echo   ScriptPath := ExpandConstant^('{tmp}\close_by_path.ps1'^);
-echo   CloseByPath^(ScriptPath, '-ExeName {#MyAppExeName} -Prefix ' + #34 + ExpandConstant^('{app}'^) + #34^);
-echo   CloseByPath^(ScriptPath, '-ExeName python.exe -Prefix ' + #34 + ExpandConstant^('{app}'^) + #34 + ' -Tree'^);
+echo   AppDir := ExpandConstant^('{app}'^);
+echo   CloseByPath^(ScriptPath, '-ExeName {#MyAppExeName} -AllInstances -Helpers python.exe -HelperPrefix ' + #34 + AppDir + #34 + ' -Tree'^);
 echo   Sleep^(1500^);
 echo end;
 echo.

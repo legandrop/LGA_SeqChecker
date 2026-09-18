@@ -55,10 +55,18 @@ exit /b 0
 :main
 cd /d "%APP_ROOT%"
 
-REM Cerrar SOLO la copia que corre desde build\ de ESTE repo, para que el linker no choque con el
-REM exe bloqueado. Antes era "taskkill /F /IM", que cerraba tambien la app instalada con la que se
-REM estaba trabajando. Ver tools\close_by_path.ps1. Sale con 2 solo si rechazo los parametros.
-powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%APP_ROOT%tools\close_by_path.ps1" -ExeName SeqChecker.exe -ExactPath "%APP_ROOT%build\SeqChecker.exe"
+REM Cierre antes de compilar (Windows bloquea el .exe mientras corre y el link fallaria).
+REM - Sin --no-run (compila y LANZA): SeqChecker es de instancia unica, asi que se cierran TODAS
+REM   las copias (la instalada, la de build, las de otros checkouts) y el python.exe que cada una
+REM   lanza para escanear, buscado por la carpeta de su instancia: nunca el python de otra app ni
+REM   uno suelto del sistema. El "." final evita que la \ de APP_ROOT escape la comilla de cierre.
+REM - Con --no-run (el modo de toda corrida automatizada): SOLO la copia de build\ que se va a pisar.
+REM Ver tools\close_by_path.ps1. Sale con 2 solo si rechazo los parametros: ahi se corta.
+if "%NO_RUN%"=="true" (
+    powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%APP_ROOT%tools\close_by_path.ps1" -ExeName SeqChecker.exe -ExactPath "%APP_ROOT%build\SeqChecker.exe"
+) else (
+    powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%APP_ROOT%tools\close_by_path.ps1" -ExeName SeqChecker.exe -AllInstances -Helpers python.exe -HelperPrefix "%APP_ROOT%." -Tree
+)
 if %ERRORLEVEL% equ 2 ( echo Error: close_by_path rechazo los parametros & exit /b 1 )
 ping -n 2 127.0.0.1 >nul
 

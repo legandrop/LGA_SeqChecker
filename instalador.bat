@@ -203,6 +203,10 @@ echo Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescriptio
 echo.
 echo [Files]
 echo Source: "deploy\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+rem El script de cierre por ruta viaja dos veces: dontcopy para que PrepareToInstall lo extraiga
+rem a {tmp}, y en {app}\tools para el desinstalador, que no tiene el {tmp} del setup.
+echo Source: "tools\close_by_path.ps1"; Flags: dontcopy
+echo Source: "tools\close_by_path.ps1"; DestDir: "{app}\tools"; Flags: ignoreversion
 echo.
 rem Inno solo desinstala los archivos que copio el: lo que la app escribe despues en
 rem {app} queda huerfano y la carpeta no se borra. logs\ la crea la app en cada arranque;
@@ -219,6 +223,53 @@ echo Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Task
 echo.
 echo [Run]
 echo Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+echo.
+rem Antes de instalar y antes de desinstalar se cierra la app POR RUTA, nunca por nombre:
+rem close_by_path.ps1 -ExeName {#MyAppExeName} -Prefix {app} cierra solo las copias que corren
+rem desde la carpeta que se va a pisar o a borrar; un build o un checkout quedan vivos.
+rem Es el bloque de la Base, Doc_Instaladores_Inno.md seccion 5.1: powershell.exe por su ruta
+rem de {sys}, -NonInteractive y las comillas como #34. Si PowerShell no corre o {app} no pasa
+rem las guardas del script, no se cierra nada e Inno avisa archivo en uso.
+echo [Code]
+echo procedure CloseByPath^(const ScriptPath, Params: String^);
+echo var
+echo   ResultCode: Integer;
+echo   CmdLine: String;
+echo begin
+echo   CmdLine := '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File ' + #34 + ScriptPath + #34 + ' ' + Params;
+echo   if Exec^(ExpandConstant^('{sys}\WindowsPowerShell\v1.0\powershell.exe'^), CmdLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode^) then
+echo     Log^('close_by_path ' + Params + ': codigo ' + IntToStr^(ResultCode^)^)
+echo   else
+echo     Log^('close_by_path no se pudo ejecutar, no se cierra nada: ' + SysErrorMessage^(ResultCode^)^);
+echo end;
+echo.
+echo function PrepareToInstall^(var NeedsRestart: Boolean^): String;
+echo var
+echo   ScriptPath: String;
+echo begin
+echo   Result := '';
+echo   ExtractTemporaryFile^('close_by_path.ps1'^);
+echo   ScriptPath := ExpandConstant^('{tmp}\close_by_path.ps1'^);
+echo   CloseByPath^(ScriptPath, '-ExeName {#MyAppExeName} -Prefix ' + #34 + ExpandConstant^('{app}'^) + #34^);
+echo   Sleep^(1500^);
+echo end;
+echo.
+rem Al desinstalar no hay {tmp} del setup: se usa la copia instalada en {app}\tools. Si falta,
+rem no se cierra nada e Inno deja lo que este en uso.
+echo function InitializeUninstall^(^): Boolean;
+echo var
+echo   ScriptPath: String;
+echo begin
+echo   Result := True;
+echo   ScriptPath := ExpandConstant^('{app}\tools\close_by_path.ps1'^);
+echo   if FileExists^(ScriptPath^) then
+echo   begin
+echo     CloseByPath^(ScriptPath, '-ExeName {#MyAppExeName} -Prefix ' + #34 + ExpandConstant^('{app}'^) + #34^);
+echo     Sleep^(1500^);
+echo   end
+echo   else
+echo     Log^('No esta ' + ScriptPath + ': no se cierra nada'^);
+echo end;
 ) > SeqChecker_installer.iss
 
 if not exist "%INSTALLER_DIR%" mkdir "%INSTALLER_DIR%"

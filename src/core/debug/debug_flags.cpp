@@ -1,4 +1,5 @@
 #include "mediatools/debug_flags.h"
+#include "mediatools/BuildTree.h"
 #include <QFile>
 #include <QTextStream>
 #include <QDir>
@@ -68,7 +69,8 @@ DebugFlags::DebugFlags() {
 
     // Cargar desde archivo si existe
     QString appPath = QCoreApplication::applicationDirPath();
-    bool isInBuild = appPath.contains("build", Qt::CaseInsensitive);
+    // Arbol de build: config y logs viven en la raiz del repo. Lo decide LgaBuildTree, no el nombre.
+    bool isInBuild = LgaBuildTree::isBuildTree(appPath);
 
     QString configPath;
     if (isInBuild) {
@@ -162,7 +164,8 @@ void DebugFlags::logStats(const QString& message) {
     QMutexLocker locker(&s_logMutex);
 
     QString appPath = QCoreApplication::applicationDirPath();
-    bool isInBuild = appPath.contains("build", Qt::CaseInsensitive);
+    // Arbol de build: config y logs viven en la raiz del repo. Lo decide LgaBuildTree, no el nombre.
+    bool isInBuild = LgaBuildTree::isBuildTree(appPath);
     QString logDir;
     if (isInBuild) {
         logDir = QDir::cleanPath(QDir(appPath).absoluteFilePath("../logs"));
@@ -184,7 +187,8 @@ void DebugFlags::logStats(const QString& message) {
 
 void DebugFlags::loadFilters() {
     QString appPath = QCoreApplication::applicationDirPath();
-    bool isInBuild = appPath.contains("build", Qt::CaseInsensitive);
+    // Arbol de build: config y logs viven en la raiz del repo. Lo decide LgaBuildTree, no el nombre.
+    bool isInBuild = LgaBuildTree::isBuildTree(appPath);
 
     QString configPath;
     if (isInBuild) {

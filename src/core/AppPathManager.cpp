@@ -1,4 +1,5 @@
 #include "mediatools/AppPathManager.h"
+#include "mediatools/BuildTree.h"
 #include "mediatools/debug_flags.h"
 
 QMap<QString, bool> AppPathManager::s_buildModeCache;
@@ -15,7 +16,8 @@ bool AppPathManager::isInBuildMode(const QString& appDir) {
     if (s_buildModeCache.contains(appDir)) {
         return s_buildModeCache[appDir];
     }
-    bool isInBuild = appDir.contains("build", Qt::CaseInsensitive);
+    // Lo decide LgaBuildTree por lo que hay en disco, no por el nombre de la ruta.
+    bool isInBuild = LgaBuildTree::isBuildTree(appDir);
     s_buildModeCache[appDir] = isInBuild;
     return isInBuild;
 }

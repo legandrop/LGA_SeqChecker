@@ -1,6 +1,7 @@
 #include "seqchecker/mainwindow.h"
 #include "mediatools/debug_flags.h"
 #include "mediatools/AppPathManager.h"
+#include "mediatools/BuildTree.h"
 #include "mediatools/utils/LogRotation.h"
 
 #include <QApplication>
@@ -54,6 +55,9 @@ int main(int argc, char *argv[])
         stream << msg << "\n";
         stream.flush();
     });
+    // La primera consulta a LgaBuildTree (la carpeta de logs, arriba) ocurre antes del handler, asi
+    // que el aviso de un LGA_BUILD_TREE invalido no llego al log. Se repite aca, ya con el handler.
+    LgaBuildTree::warnIfInvalidOverride();
 
     CONDITIONAL_DEBUG("core", "________________________________________________________");
     CONDITIONAL_DEBUG("core", "LGA SeqChecker - Iniciando");

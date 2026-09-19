@@ -10,8 +10,6 @@ __pycache__/
 # Binarios pesados / runtime embebido (no versionar)
 /python_runtime/
 /thirdparty/
-.codex/
-.cursor/
 
 # Artefacto generado: instalador.bat lo reescribe entero en cada corrida, con
 # `echo` de cmd.exe, o sea en CRLF. Versionarlo dejaba el repo desalineado

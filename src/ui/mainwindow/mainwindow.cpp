@@ -233,6 +233,27 @@ TableColumnWidthHelper::Config makeSeqColumnConfig(const QString &context)
     config.debugContext = context;
     return config;
 }
+
+#ifdef Q_OS_WIN
+// Solo lectura: RegOpenKeyExW(KEY_READ) no crea la clave si no existe. Se usa para migrar la
+// geometria de una instalacion vieja SIN abrir un QSettings() a ciegas -- ese constructor abre
+// con NativeFormat y en Windows eso es RegCreateKeyEx, que crea HKCU\Software\LGA\LGA SeqChecker
+// con solo LEER, aunque la clave nunca haya existido (ver AGENTS.md / PROPUESTA_REGISTRO.md).
+bool legacySettingsRegistryKeyExists()
+{
+    const QString subKey = QStringLiteral("Software\\%1\\%2")
+                                .arg(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    HKEY hKey = nullptr;
+    const LONG rc = RegOpenKeyExW(HKEY_CURRENT_USER,
+                                   reinterpret_cast<const wchar_t *>(subKey.utf16()),
+                                   0, KEY_READ, &hKey);
+    if (rc == ERROR_SUCCESS) {
+        RegCloseKey(hKey);
+        return true;
+    }
+    return false;
+}
+#endif
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
@@ -1128,12 +1149,25 @@ void MainWindow::loadWindowSettings()
         geo = s.value("geometry").toByteArray();
         m_cpuPresetName = s.value("seqchecker/cpu_preset", "High").toString();
         m_keepOnTop = s.value("seqchecker/keep_on_top", false).toBool();
-    } else {
+    }
+#ifdef Q_OS_WIN
+    // Migracion de una instalacion vieja: solo se entra a QSettings() -y por lo tanto al
+    // registro- si la clave YA existe. Si no existe (maquina nueva, o el .ini de arriba ya
+    // se pudo leer), no se toca el registro para nada: ni para leer ni, de rebote, para crear.
+    else if (legacySettingsRegistryKeyExists()) {
         QSettings s;
         geo = s.value("geometry").toByteArray();
         m_cpuPresetName = s.value("seqchecker/cpu_preset", "High").toString();
         m_keepOnTop = s.value("seqchecker/keep_on_top", false).toBool();
     }
+#else
+    else {
+        QSettings s;
+        geo = s.value("geometry").toByteArray();
+        m_cpuPresetName = s.value("seqchecker/cpu_preset", "High").toString();
+        m_keepOnTop = s.value("seqchecker/keep_on_top", false).toBool();
+    }
+#endif
     if (!geo.isEmpty()) restoreGeometry(geo);
     applyCpuPresetSelection(m_cpuPresetName);
     setKeepOnTopState(m_keepOnTop);
@@ -1152,10 +1186,22 @@ void MainWindow::saveWindowSettings()
     if (!configPath.isEmpty()) {
         QSettings s(configPath, QSettings::IniFormat);
         saveSettings(s);
-    } else {
-        QSettings s;
-        saveSettings(s);
+        return;
     }
+
+#ifdef Q_OS_WIN
+    // En Windows nunca se cae a QSettings() como fallback de guardado: ese constructor escribe
+    // en el registro (RegCreateKeyEx), y el objetivo de esta migracion es que la app deje de
+    // tocar HKCU\Software\LGA\LGA SeqChecker. Si no se pudo resolver el .ini, no se guarda nada
+    // en vez de dejar geometria nueva en la clave vieja.
+    CONDITIONAL_DEBUG("warning",
+                       QString("{warning} [MainWindow::saveWindowSettings] no se pudo resolver "
+                               "la ruta del .ini de settings; no se guarda geometria."));
+#else
+    // En mac NativeFormat es un plist, no el registro: este fallback sigue siendo valido ahi.
+    QSettings s;
+    saveSettings(s);
+#endif
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event)

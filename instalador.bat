@@ -274,6 +274,18 @@ echo   end
 echo   else
 echo     Log^('No esta ' + ScriptPath + ': no se cierra nada'^);
 echo end;
+echo.
+rem La geometria migrada desde el registro (mainwindow.cpp, MainWindow::loadWindowSettings) deja
+rem HKCU\Software\LGA\LGA SeqChecker en maquinas viejas; esta clave es enteramente nuestra, asi
+rem que se borra entera. Software\LGA es compartida con otras apps LGA: solo RegDeleteKeyIfEmpty.
+echo procedure CurUninstallStepChanged^(CurUninstallStep: TUninstallStep^);
+echo begin
+echo   if CurUninstallStep = usPostUninstall then
+echo   begin
+echo     RegDeleteKeyIncludingSubkeys^(HKEY_CURRENT_USER, 'Software\LGA\LGA SeqChecker'^);
+echo     RegDeleteKeyIfEmpty^(HKEY_CURRENT_USER, 'Software\LGA'^);
+echo   end;
+echo end;
 ) > SeqChecker_installer.iss
 
 if not exist "%INSTALLER_DIR%" mkdir "%INSTALLER_DIR%"

@@ -96,7 +96,18 @@ echo.
 echo Implementacion completada. App portable en carpeta 'deploy'.
 echo.
 if /I "%NO_RUN%"=="true" goto skip_run
-start deploy\SeqChecker.exe
+REM La abre el Explorador de Windows, no esta consola: lanzada con start, la app queda dentro del
+REM arbol de procesos de la terminal que corrio el script y se cierra con ella. explorer.exe no usa
+REM el directorio actual, asi que la ruta va absoluta, por APP_ROOT. La app nace con cwd System32 y
+REM sin el entorno de este script: deploy\ lleva sus DLL y su qt.conf al lado del exe. Si el exe no
+REM esta no se llama a explorer.exe, que abriria una ventana de carpeta. explorer.exe siempre
+REM devuelve 1: no se mira su codigo.
+if not exist "%APP_ROOT%deploy\SeqChecker.exe" (
+    echo ERROR: no existe "%APP_ROOT%deploy\SeqChecker.exe". No se abre nada.
+    endlocal
+    exit /b 1
+)
+explorer.exe "%APP_ROOT%deploy\SeqChecker.exe"
 goto end_run
 
 :skip_run

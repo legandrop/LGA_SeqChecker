@@ -385,10 +385,13 @@ echo ============================================================
 :AFTER_GITHUB_RELEASE
 echo.
 
+REM El instalador lo abre el Explorador de Windows, no esta consola: lanzado con start queda dentro
+REM del arbol de procesos de la terminal que corrio el script y se cierra con ella. OUTPUT_EXE es
+REM absoluta [sale de SCRIPT_DIR] y se define fuera de este bloque. explorer.exe siempre devuelve 1.
 choice /C YN /M "Desea ejecutar el instalador ahora mismo?"
 if %ERRORLEVEL%==1 (
     echo Ejecutando el instalador...
-    start "" "%OUTPUT_EXE%"
+    if exist "%OUTPUT_EXE%" explorer.exe "%OUTPUT_EXE%"
 ) else (
     echo Instalador no ejecutado.
 )

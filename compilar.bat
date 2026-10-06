@@ -139,8 +139,6 @@ if not exist "build\SeqChecker.exe" (
     exit /b 1
 )
 
-if "%NO_DEPLOY%"=="true" goto :after_deps
-
 REM ============================================================
 REM  DEPENDENCIAS DE RUNTIME: verificar -> reparar -> verificar
 REM
@@ -160,6 +158,10 @@ REM  SI incluye iconengines\qsvgicon.dll: sin el, QIcon sobre SVG cae al plugin
 REM  de imageformats y rasteriza al tamano intrinseco en vez de escalar.
 REM ============================================================
 set "DEP_LIST=libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll Qt6Concurrent.dll Qt6Svg.dll platforms\qwindows.dll imageformats\qsvg.dll iconengines\qsvgicon.dll"
+
+REM --no-deploy saltea verificar y reparar, pero la lista se define antes del salto: el tramo de
+REM lanzamiento la vuelve a usar (ver "launch_app" mas abajo).
+if "%NO_DEPLOY%"=="true" goto :after_deps
 
 echo Verificando dependencias de runtime...
 set DEPS_MISSING=false
@@ -197,6 +199,24 @@ if "%NO_RUN%"=="true" (
     exit /b 0
 )
 
+REM --no-deploy salteo la verificacion de arriba, y la app que abre explorer.exe no hereda el PATH
+REM de este script [el de Qt y MinGW]: sobre un arbol sin las DLL al lado del exe moriria con un
+REM cartel de Windows. Aca solo se VERIFICA la misma DEP_LIST, sin copiar nada; si falta algo se
+REM corta sin abrir la app. Con --wait no hace falta: la app corre desde esta consola y si hereda
+REM el PATH.
+if not "%NO_DEPLOY%"=="true" goto :launch_app
+if "%WAIT_FOR_APP%"=="true" goto :launch_app
+set DEPS_MISSING=false
+for %%D in (%DEP_LIST%) do call :check_dep "%%D"
+if "%DEPS_MISSING%"=="true" (
+    echo.
+    echo ERROR: --no-deploy salteo la copia de dependencias y faltan archivos al lado de build\SeqChecker.exe.
+    echo        La app la abre el Explorador de Windows y no hereda el PATH de este script: sin ellos
+    echo        no arranca. No se abre nada. Corre compilar.bat sin --no-deploy para copiarlos.
+    exit /b 1
+)
+
+:launch_app
 echo Ejecutando SeqChecker...
 cd build
 if "%WAIT_FOR_APP%"=="true" (

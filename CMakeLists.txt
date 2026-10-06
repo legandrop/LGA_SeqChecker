@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(SeqChecker VERSION 0.123 LANGUAGES CXX)
+project(SeqChecker VERSION 0.124 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -74,6 +74,23 @@ add_executable(${PROJECT_NAME}
     ${HEADERS}
     ${RESOURCES}
 )
+
+# Plugin offscreen de Qt junto al exe. windeployqt y la copia de compilar.bat solo traian
+# qwindows; sin qoffscreen, lanzar con QT_QPA_PLATFORM=offscreen (pruebas sin pantalla) hace que
+# Qt muestre un MessageBox fatal en el escritorio del usuario en vez de fallar por consola.
+if(WIN32)
+    get_filename_component(LGA_QOFFSCREEN_DLL
+        "${Qt6_DIR}/../../../plugins/platforms/qoffscreen.dll" ABSOLUTE)
+    if(EXISTS "${LGA_QOFFSCREEN_DLL}")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/platforms"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LGA_QOFFSCREEN_DLL}"
+                    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/platforms/qoffscreen.dll"
+            VERBATIM)
+    else()
+        message(WARNING "No se encontro qoffscreen.dll en ${LGA_QOFFSCREEN_DLL}")
+    endif()
+endif()
 
 # Vincular con Qt
 target_link_libraries(${PROJECT_NAME} PRIVATE

@@ -156,8 +156,12 @@ REM  es una dependencia real.
 REM
 REM  SI incluye iconengines\qsvgicon.dll: sin el, QIcon sobre SVG cae al plugin
 REM  de imageformats y rasteriza al tamano intrinseco en vez de escalar.
+REM
+REM  SI incluye platforms\qoffscreen.dll: lo copia el POST_BUILD de CMakeLists.txt y es lo que
+REM  permite lanzar la app sin pantalla [QT_QPA_PLATFORM=offscreen]. Sin el, Qt muestra un cartel
+REM  fatal en el escritorio en vez de fallar por consola.
 REM ============================================================
-set "DEP_LIST=libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll Qt6Concurrent.dll Qt6Svg.dll platforms\qwindows.dll imageformats\qsvg.dll iconengines\qsvgicon.dll"
+set "DEP_LIST=libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll Qt6Concurrent.dll Qt6Svg.dll platforms\qwindows.dll platforms\qoffscreen.dll imageformats\qsvg.dll iconengines\qsvgicon.dll"
 
 REM --no-deploy saltea verificar y reparar, pero la lista se define antes del salto: el tramo de
 REM lanzamiento la vuelve a usar (ver "launch_app" mas abajo).
@@ -284,6 +288,7 @@ call :copy_dep "%QT_DIR%\bin" "" Qt6Widgets.dll
 call :copy_dep "%QT_DIR%\bin" "" Qt6Concurrent.dll
 call :copy_dep "%QT_DIR%\bin" "" Qt6Svg.dll
 call :copy_dep "%QT_DIR%\plugins\platforms" "platforms" qwindows.dll
+call :copy_dep "%QT_DIR%\plugins\platforms" "platforms" qoffscreen.dll
 call :copy_dep "%QT_DIR%\plugins\imageformats" "imageformats" qsvg.dll
 REM OJO: qsvgicon.dll vive en plugins\iconengines, NO en plugins\imageformats.
 call :copy_dep "%QT_DIR%\plugins\iconengines" "iconengines" qsvgicon.dll

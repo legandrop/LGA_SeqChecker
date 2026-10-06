@@ -205,7 +205,11 @@ if "%WAIT_FOR_APP%"=="true" (
     REM busca ejecutables en el directorio actual y el nombre pelado devuelve 9009.
     .\SeqChecker.exe
 ) else (
-    start SeqChecker.exe
+    REM La abre el Explorador de Windows, no esta consola: lanzada con start, la app queda
+    REM dentro del arbol de procesos de la terminal que corrio el script y se cierra con ella.
+    REM La app nace con cwd System32 y sin el entorno de este script. explorer.exe siempre
+    REM devuelve 1: no se mira su codigo.
+    explorer.exe "%APP_ROOT%build\SeqChecker.exe"
 )
 REM El codigo de salida se lee ACA, fuera del bloque: adentro, cmd.exe lo habria
 REM expandido al parsear, o sea antes de que la app corriera.

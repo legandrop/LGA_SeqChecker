@@ -93,7 +93,7 @@ QHeaderView::section {
     color: #999999;
     padding: 4px 6px;
     border: none;
-    font-weight: bold;
+    font-weight: 600;
 }
 
 QTableCornerButton::section {
@@ -293,11 +293,11 @@ QPushButton.secondary:pressed {
 QPushButton.action {
     background-color: violeta_oscuro; /* ✅ */
     color: txt_principal;
-    font-weight: bold;
+    font-weight: 600;
     font-size: 11pt;
     font-family: "Inter";
     font-size: 0.65rem;  /* Tamaño para botones de acción */
-    font-weight: 700;  /* Bold weight */
+    font-weight: 600;  /* SemiBold: la Inter embebida no trae 700 */
 }
 
 QPushButton.action:hover {
@@ -771,11 +771,11 @@ QGroupBox::title {
     subcontrol-position: top left;
     padding: 0 5px;
     color: #ACFB19;   /* (❌❌❌) */
-    font-weight: bold;
+    font-weight: 600;
     background-color: #E59628; /* (❌❌❌) */
     margin-left: 8px;
     font-family: "Inter";
-    font-weight: 900;  /* Black weight */
+    font-weight: 600;  /* la Inter embebida no trae 900 */
     font-size: 1.2rem;
     letter-spacing: 0.5px;
 }

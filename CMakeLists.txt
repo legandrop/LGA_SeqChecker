@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(SeqChecker VERSION 0.125 LANGUAGES CXX)
+project(SeqChecker VERSION 0.126 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -45,6 +45,7 @@ set(SOURCES
     src/main.cpp
     src/ui/mainwindow/mainwindow.cpp
     src/core/BuildTree.cpp
+    src/core/RunMode.cpp
     src/core/AppPathManager.cpp
     src/core/debug/debug_flags.cpp
     src/utils/ArrowComboBox.cpp
@@ -62,6 +63,8 @@ set(HEADERS
     include/seqchecker/utils/TableColumnWidthHelper.h
     include/seqchecker/utils/TableHeaderDividerView.h
     include/mediatools/BuildTree.h
+    include/mediatools/RunMode.h
+    include/mediatools/LgaHeadlessGuard.h
     include/mediatools/AppPathManager.h
     include/mediatools/debug_flags.h
     include/mediatools/PythonRunner.h

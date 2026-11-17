@@ -6,6 +6,7 @@
 #include "mediatools/debug_flags.h"
 #include "mediatools/AppPathManager.h"
 #include "mediatools/PythonRunner.h"
+#include "mediatools/RunMode.h"
 
 #include <QWidget>
 #include <QVBoxLayout>
@@ -1175,6 +1176,12 @@ void MainWindow::loadWindowSettings()
 
 void MainWindow::saveWindowSettings()
 {
+    // Una corrida sin pantalla o de captura no escribe: en offscreen la pantalla falsa es de
+    // 800x800 y la geometria guardada salia recortada, y la app abria asi la vez siguiente. Los
+    // valores siguen en memoria durante la corrida (ver RunMode.h).
+    if (!LgaRunMode::canPersistConfig()) {
+        return;
+    }
     const QString configPath = settingsFilePath();
 
     auto saveSettings = [this](QSettings &s) {

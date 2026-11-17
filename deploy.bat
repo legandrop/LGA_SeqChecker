@@ -8,22 +8,28 @@ set "APP_ROOT=%~dp0"
 set "NO_RUN=false"
 set "BUILD_DIR=build_deploy"
 set "PARALLEL_CORES=%NUMBER_OF_PROCESSORS%"
+set "BAD_ARG="
 
 :parse_args
 if "%~1"=="" goto after_args
-if /I "%~1"=="--no-run" set "NO_RUN=true"
-shift
-goto parse_args
+if /I "%~1"=="--no-run" ( set "NO_RUN=true" & shift & goto parse_args )
+set "BAD_ARG=%~1"
 
 :after_args
-REM Cerrar SOLO las copias que corren desde deploy\ y build_deploy\ de ESTE repo, y ANTES de
-REM borrar deploy\ (con el exe corriendo, el rmdir lo dejaba a medias). Antes era
+REM Una opcion mal escrita corta ACA, antes de cerrar, compilar o borrar nada. Ignorarla hacia
+REM que un --no-run con un error de tipeo terminara abriendo la app.
+if defined BAD_ARG (
+    echo ERROR: opcion desconocida: "%BAD_ARG%". Unica opcion: --no-run.
+    echo No se cerro, no se compilo ni se borro nada.
+    exit /b 1
+)
+
+REM Cerrar SOLO las copias que corren desde deploy\ y build_deploy\ de ESTE repo, ANTES de
+REM compilar (el link fallaria con el exe de build_deploy\ corriendo) y de borrar deploy\ (con el
+REM exe corriendo, el rmdir lo dejaba a medias). Antes era
 REM "taskkill /F /IM", que cerraba tambien la app instalada. Ver tools\close_by_path.ps1.
 powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%APP_ROOT%tools\close_by_path.ps1" -ExeName SeqChecker.exe -ExactPath "%APP_ROOT%deploy\SeqChecker.exe,%APP_ROOT%%BUILD_DIR%\SeqChecker.exe"
 if %ERRORLEVEL% equ 2 ( echo Error: close_by_path rechazo los parametros & exit /b 1 )
-
-echo Limpiando carpeta de deploy anterior...
-if exist deploy rmdir /S /Q deploy
 
 echo Implementando LGA SeqChecker...
 
@@ -40,8 +46,6 @@ if not exist "C:\Program Files\LLVM\bin\ld.lld.exe" (
     exit /b 1
 )
 
-if not exist deploy mkdir deploy
-
 echo Configurando con CMake (modo Release)...
 cmake -S . -B "%BUILD_DIR%" -G "Ninja" -DCMAKE_PREFIX_PATH="C:/Qt/6.5.3/mingw_64" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_DEBUG="-g -O0 -Wno-unused-parameter" -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--stack,16777216" -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld"
 if %ERRORLEVEL% neq 0 (
@@ -55,6 +59,20 @@ if %ERRORLEVEL% neq 0 (
     echo Error en la compilacion.
     exit /b 1
 )
+
+REM deploy\ se borra recien ACA, con la compilacion ya hecha: si fallaba, antes quedaba sin
+REM deploy anterior y sin deploy nuevo.
+if not exist "%BUILD_DIR%\SeqChecker.exe" (
+    echo ERROR: no se encontro %BUILD_DIR%\SeqChecker.exe. No se toca deploy\.
+    exit /b 1
+)
+echo Limpiando carpeta de deploy anterior...
+if exist deploy rmdir /S /Q deploy
+if exist deploy (
+    echo ERROR: no se pudo borrar deploy\ [hay archivos en uso]. No se genera el deploy.
+    exit /b 1
+)
+mkdir deploy
 
 copy /Y "%BUILD_DIR%\SeqChecker.exe" deploy\
 if exist "%BUILD_DIR%\*.dll" copy /Y "%BUILD_DIR%\*.dll" deploy\

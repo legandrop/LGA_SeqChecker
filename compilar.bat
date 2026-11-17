@@ -8,6 +8,7 @@ set NO_DEPLOY=false
 set NO_RUN=false
 set BUILD_TYPE=Debug
 set SHOW_HELP=false
+set "BAD_ARG="
 set WAIT_FOR_APP=false
 set PARALLEL_CORES=%NUMBER_OF_PROCESSORS%
 REM La carpeta del script se toma ANTES de parsear: `shift` (sin /1) corre tambien el parametro
@@ -24,17 +25,32 @@ if "%1"=="--release"     ( set "BUILD_TYPE=Release" & shift & goto parse_args )
 if "%1"=="--parallel"    ( set "PARALLEL_CORES=%2" & shift & shift & goto parse_args )
 if "%1"=="--help" ( set "SHOW_HELP=true" & shift & goto parse_args )
 if "%1"=="-h"     ( set "SHOW_HELP=true" & shift & goto parse_args )
-shift
-goto parse_args
+set "BAD_ARG=%~1"
 
 :after_args
+REM Una opcion mal escrita corta ACA, antes de cerrar o compilar nada. Ignorarla hacia que un
+REM --no-run con un error de tipeo compilara, cerrara TODAS las instancias de SeqChecker [la
+REM instalada incluida] y abriera la app.
+if defined BAD_ARG goto :bad_arg
 REM `call` + `goto main` hacia que --help COMPILARA el proyecto entero: la
 REM subrutina retornaba y la ejecucion seguia de largo. Con `goto` no vuelve.
 if "%SHOW_HELP%"=="true" goto :show_help
+REM --parallel sin numero se comeria la opcion siguiente [--parallel --no-run].
+echo %PARALLEL_CORES%| findstr /R "^[1-9][0-9]*$" >nul
+if errorlevel 1 goto :bad_parallel
 goto :main
 
+:bad_arg
+echo ERROR: opcion desconocida: "%BAD_ARG%"
+echo Ver compilar.bat --help. No se cerro ni se compilo nada.
+exit /b 1
+
+:bad_parallel
+echo ERROR: --parallel necesita un numero de nucleos. No se cerro ni se compilo nada.
+exit /b 1
+
 :show_help
-echo Uso: %0 [opciones]
+echo Uso: compilar.bat [opciones]
 echo.
 echo Opciones:
 echo   --wait           Dejar la app en foreground: se ven su stdout/stderr y su
@@ -47,9 +63,9 @@ echo   --release        Compilar en modo Release
 echo   --parallel N     Usar N nucleos para compilacion paralela (default: todos disponibles)
 echo.
 echo Ejemplos:
-echo   %0
-echo   %0 --wait
-echo   %0 --force-clean --parallel 8
+echo   compilar.bat
+echo   compilar.bat --wait
+echo   compilar.bat --force-clean --parallel 8
 exit /b 0
 
 :main

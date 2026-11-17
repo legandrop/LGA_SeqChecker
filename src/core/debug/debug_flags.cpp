@@ -74,7 +74,7 @@ DebugFlags::DebugFlags() {
 
     QString configPath;
     if (isInBuild) {
-        configPath = QDir::cleanPath(QDir(appPath).absoluteFilePath("../config/debug_flags.txt"));
+        configPath = QDir(LgaBuildTree::appRootDir(appPath)).filePath("config/debug_flags.txt");
     } else {
         configPath = QDir(appPath).filePath("config/debug_flags.txt");
     }
@@ -168,7 +168,7 @@ void DebugFlags::logStats(const QString& message) {
     bool isInBuild = LgaBuildTree::isBuildTree(appPath);
     QString logDir;
     if (isInBuild) {
-        logDir = QDir::cleanPath(QDir(appPath).absoluteFilePath("../logs"));
+        logDir = QDir(LgaBuildTree::appRootDir(appPath)).filePath("logs");
     } else {
         logDir = QDir(appPath).filePath("logs");
     }
@@ -192,7 +192,7 @@ void DebugFlags::loadFilters() {
 
     QString configPath;
     if (isInBuild) {
-        configPath = QDir::cleanPath(QDir(appPath).absoluteFilePath("../config/debug_filters.txt"));
+        configPath = QDir(LgaBuildTree::appRootDir(appPath)).filePath("config/debug_filters.txt");
     } else {
         configPath = QDir(appPath).filePath("config/debug_filters.txt");
     }

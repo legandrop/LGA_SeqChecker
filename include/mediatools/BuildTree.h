@@ -29,7 +29,8 @@
  *     - un `CMakeCache.txt` en la carpeta del ejecutable o hasta DOS niveles arriba (CMake lo
  *       deja en todo arbol de build y jamas viaja a una instalacion), y
  *     - que el padre de esa carpeta tenga `CMakeLists.txt` y `py_scr/`: la forma de la raiz del
- *       repo.
+ *       repo. Si el padre no la tiene, se mira la carpeta que el cache declara en
+ *       `CMAKE_HOME_DIRECTORY`: un build FUERA del repo no tiene la raiz arriba.
  *     Solo el `CMakeCache.txt` no alcanza: una instalacion colgada abajo de un arbol de build
  *     ajeno pasaria por build. Solo la forma del repo tampoco: el staging `deploy/` (que tiene
  *     `py_scr/` copiado) pasaria por build.
@@ -49,6 +50,21 @@ namespace LgaBuildTree {
 
 /// `appDir` es la carpeta del ejecutable. El resultado se cachea por ruta.
 bool isBuildTree(const QString &appDir);
+
+/**
+ * La carpeta de la que cuelgan `python_runtime/`, `py_scr/`, `thirdparty/`, `config/` y `logs/`.
+ * En una instalacion, `appDir` mismo. En un arbol de build en Windows, la raiz del repo: el padre
+ * de la carpeta que tiene el `CMakeCache.txt` o, con el build fuera del repo, su
+ * `CMAKE_HOME_DIRECTORY`; lo mismo que `isBuildTree()` ya comprobo.
+ *
+ * Antes cada llamador usaba `appDir/..`, que es la raiz del repo solo si el exe vive en la carpeta
+ * del `CMakeCache.txt`. Con el exe uno o dos niveles abajo (un generador multi-config deja
+ * `build/Debug/App.exe`) daba `build/` y todo se buscaba ahi adentro.
+ *
+ * Con `LGA_BUILD_TREE=1` sin `CMakeCache.txt` a mano, y fuera de Windows, sigue la regla de
+ * siempre: el padre de `appDir`.
+ */
+QString appRootDir(const QString &appDir);
 
 /// Repite el aviso de un `LGA_BUILD_TREE` invalido (no cambia ninguna respuesta). main() la
 /// llama justo despues de instalar su handler de mensajes: la primera consulta sale de la

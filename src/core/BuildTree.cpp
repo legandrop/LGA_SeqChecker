@@ -2,6 +2,7 @@
 
 #include <QDebug>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QHash>
 #include <QMutex>
@@ -82,20 +83,59 @@ bool looksLikeSourceRoot(const QDir &dir)
         && QFileInfo(dir.filePath(QStringLiteral("py_scr"))).isDir();
 }
 
+// `CMAKE_HOME_DIRECTORY` del `CMakeCache.txt` de `buildRoot`: la carpeta de fuentes con la que se
+// configuro ese arbol, o vacio. CMake la escribe en todo cache (`CMAKE_HOME_DIRECTORY:INTERNAL=...`).
+QString cacheHomeDirectory(const QString &buildRoot)
+{
+    QFile file(QDir(buildRoot).filePath(QStringLiteral("CMakeCache.txt")));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return QString();
+    }
+    static const QByteArray kKey("CMAKE_HOME_DIRECTORY:");
+    while (!file.atEnd()) {
+        const QByteArray line = file.readLine().trimmed();
+        if (!line.startsWith(kKey)) {
+            continue;
+        }
+        const int eq = line.indexOf('=');
+        if (eq < 0) {
+            return QString();
+        }
+        const QString value = QString::fromUtf8(line.mid(eq + 1)).trimmed();
+        return value.isEmpty() ? QString() : QDir::cleanPath(QDir::fromNativeSeparators(value));
+    }
+    return QString();
+}
+
+// La raiz del repo de un arbol de build, o vacio si no la hay. Primero el PADRE de la carpeta del
+// `CMakeCache.txt` (el build dentro del repo). Si no, la carpeta de fuentes que el propio cache
+// declara: un build FUERA del repo no tiene la raiz arriba, y sin esto se tomaba por instalacion.
+// En los dos casos se exige la forma de la raiz del repo.
+QString sourceRootOf(const QString &buildRoot)
+{
+    if (buildRoot.isEmpty()) {
+        return QString();
+    }
+    QDir parent(buildRoot);
+    if (parent.cdUp() && looksLikeSourceRoot(parent)) {
+        return parent.absolutePath();
+    }
+    const QString home = cacheHomeDirectory(buildRoot);
+    if (!home.isEmpty() && QDir(home).exists() && looksLikeSourceRoot(QDir(home))) {
+        return QDir(home).absolutePath();
+    }
+    return QString();
+}
+
 bool evaluate(const QString &appDir)
 {
     const int forced = envOverride();
     if (forced >= 0) {
         return forced == 1;
     }
-    // Hacen falta LAS DOS cosas: un `CMakeCache.txt` cerca Y que arriba de el este la raiz
-    // del repo.
-    const QString buildRoot = findBuildRoot(appDir);
-    if (buildRoot.isEmpty()) {
-        return false;
-    }
-    QDir parent(buildRoot);
-    return parent.cdUp() && looksLikeSourceRoot(parent);
+    // Hacen falta LAS DOS cosas: un `CMakeCache.txt` cerca Y la raiz del repo, arriba de el o
+    // donde el cache dice que estan las fuentes.
+    return !sourceRootOf(findBuildRoot(appDir)).isEmpty();
 }
 
 #else
@@ -131,6 +171,28 @@ bool isBuildTree(const QString &appDir)
     QMutexLocker locker(&cacheMutex());
     cache().insert(key, result);
     return result;
+}
+
+QString appRootDir(const QString &appDir)
+{
+    if (appDir.trimmed().isEmpty()) {
+        return appDir;
+    }
+    const QString key = QDir::cleanPath(QDir::fromNativeSeparators(appDir));
+    if (!isBuildTree(key)) {
+        return key;
+    }
+#ifdef Q_OS_WIN
+    // La raiz del repo: el padre de la carpeta del `CMakeCache.txt` (o la carpeta de fuentes que
+    // declara el cache, con el build fuera del repo), este el exe en ella o hasta dos niveles
+    // abajo. Es la misma carpeta que `evaluate()` miro.
+    const QString root = sourceRootOf(findBuildRoot(key));
+    if (!root.isEmpty()) {
+        return root;
+    }
+#endif
+    // Override sin `CMakeCache.txt`, y macOS/Linux (predicado por nombre): la regla de siempre.
+    return QDir::cleanPath(QDir(key).absoluteFilePath(QStringLiteral("..")));
 }
 
 void warnIfInvalidOverride()

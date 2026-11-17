@@ -8,6 +8,8 @@
 #include <QDebug>
 #include <QMap>
 
+#include "mediatools/BuildTree.h"
+
 class AppPathManager {
 public:
     static QString getPythonExecutableName() {
@@ -36,8 +38,8 @@ public:
 
 #ifdef Q_OS_WIN
         if (isInBuild) {
-            possiblePaths << QDir::cleanPath(QDir(appDir).absoluteFilePath("../python_runtime/" + osFolder + "/" + pythonExe));
-            possiblePaths << QDir::cleanPath(QDir(appDir).absoluteFilePath("../python_runtime/" + pythonExe));
+            possiblePaths << QDir::cleanPath(QDir(LgaBuildTree::appRootDir(appDir)).absoluteFilePath("python_runtime/" + osFolder + "/" + pythonExe));
+            possiblePaths << QDir::cleanPath(QDir(LgaBuildTree::appRootDir(appDir)).absoluteFilePath("python_runtime/" + pythonExe));
             possiblePaths << QDir(appDir).filePath("python_runtime/" + osFolder + "/" + pythonExe);
         } else {
             possiblePaths << QDir(appDir).filePath("python_runtime/" + osFolder + "/" + pythonExe);
@@ -69,7 +71,7 @@ public:
         QStringList possiblePaths;
 
         if (isInBuild) {
-            possiblePaths << QDir::cleanPath(QDir(appDir).absoluteFilePath("../py_scr/" + scriptName));
+            possiblePaths << QDir::cleanPath(QDir(LgaBuildTree::appRootDir(appDir)).absoluteFilePath("py_scr/" + scriptName));
             possiblePaths << QDir(appDir).filePath("py_scr/" + scriptName);
         } else {
             possiblePaths << QDir(appDir).filePath("py_scr/" + scriptName);
@@ -98,7 +100,7 @@ public:
         QString logsPath;
         bool isInBuild = isInBuildMode(baseDir);
         if (isInBuild) {
-            logsPath = QDir::cleanPath(QDir(baseDir).absoluteFilePath("../logs"));
+            logsPath = QDir::cleanPath(QDir(LgaBuildTree::appRootDir(baseDir)).absoluteFilePath("logs"));
         } else {
             logsPath = QDir(baseDir).filePath("logs");
         }
@@ -127,7 +129,7 @@ public:
         QStringList possiblePaths;
 
         if (isInBuild) {
-            possiblePaths << QDir::cleanPath(QDir(appDir).absoluteFilePath("../thirdparty/win/OIIO/oiiotool.exe"));
+            possiblePaths << QDir::cleanPath(QDir(LgaBuildTree::appRootDir(appDir)).absoluteFilePath("thirdparty/win/OIIO/oiiotool.exe"));
         } else {
             possiblePaths << QDir(appDir).filePath("thirdparty/win/OIIO/oiiotool.exe");
         }
@@ -146,8 +148,8 @@ public:
         QStringList possiblePaths;
 
         if (isInBuild) {
-            possiblePaths << QDir::cleanPath(QDir(appDir).absoluteFilePath("../thirdparty/win/FFmpeg/bin/ffprobe.exe"));
-            possiblePaths << QDir::cleanPath(QDir(appDir).absoluteFilePath("../thirdparty/win/FFmpeg/ffprobe.exe"));
+            possiblePaths << QDir::cleanPath(QDir(LgaBuildTree::appRootDir(appDir)).absoluteFilePath("thirdparty/win/FFmpeg/bin/ffprobe.exe"));
+            possiblePaths << QDir::cleanPath(QDir(LgaBuildTree::appRootDir(appDir)).absoluteFilePath("thirdparty/win/FFmpeg/ffprobe.exe"));
         } else {
             possiblePaths << QDir(appDir).filePath("thirdparty/win/FFmpeg/bin/ffprobe.exe");
             possiblePaths << QDir(appDir).filePath("thirdparty/win/FFmpeg/ffprobe.exe");

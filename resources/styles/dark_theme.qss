@@ -160,7 +160,7 @@ QPushButton {
     border-radius: 5px;
     font-family: "Inter";
     font-size: 14px;
-    font-weight: 450;
+    font-weight: 400;  /* Regular: la Inter embebida no trae 450 (pedirlo dibujaba igual que 400) */
     letter-spacing: 0px;
 
 }
